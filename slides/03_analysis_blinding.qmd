@@ -16,19 +16,15 @@ editor_options:
 
 ## Where we are
 
-1. Version control — *your history is public and ordered*
-2. Literate programming — *your analysis is one executable document*
-3. **Analysis blinding** — *your decisions are made before you can bend them*
+In the first two parts we set up version control and literate programming. Both
+are useful by themselves, but they also happen to be the two things you need
+before blind analysis is possible at all.
 
-. . .
+That is what this part is about.
 
-The first two are useful on their own. The third only works if you have them.
+## The problem: researcher degrees of freedom
 
-# The problem
-
-## Degrees of freedom
-
-Between raw data and a p-value, an analyst makes dozens of choices:
+Between a raw data file and a p-value there are a lot of choices to make:
 
 ::: {.columns}
 ::: {.column width="50%"}
@@ -39,256 +35,212 @@ Between raw data and a p-value, an analyst makes dozens of choices:
 :::
 ::: {.column width="50%"}
 - which model to fit
-- which observations are "failed"
+- what counts as a failed attention check
 - what to do about a strange site
-- when to stop looking
+- when to stop checking things
 :::
 :::
 
-. . .
+Every one of these is defensible. The trouble is that we usually make them after
+we can already see which way each one pushes the result.
 
-Each is defensible. Each is made **after** you can see which way it pushes.
+## This is not mainly about fraud
 
-## This is not about dishonesty
+You do not need bad intentions for this to bite. It is enough to look a bit
+harder for problems in the data when the result disagrees with what you
+expected, and a bit less hard when it agrees.
 
-You do not need bad intentions to get a biased result.
+That asymmetry is very difficult to notice from the inside, and as far as I know
+nobody is immune to it.
 
-. . .
+## Why the usual fixes don't fully solve it
 
-You need only to look a little harder for problems in the data when the result
-disagrees with you, and a little less hard when it agrees.
+Preregistration fixes the analysis plan before the data exist. That helps, but
+you cannot preregister decisions about data quality problems you have not seen
+yet — and those are often the consequential ones.
 
-. . .
+Reproducibility lets someone re-run your code and get your number back. If the
+number was biased, they will reproduce the bias faithfully.
 
-Nobody is immune. Not you, not me, not the person whose method you trust most.
+Neither one lets you look at your actual data and still keep the decisions
+honest.
 
-## The standard fixes are incomplete
+## Blind analysis
 
-**Preregistration** fixes the plan before the data exists — but you cannot
-preregister decisions about data quality you have not seen yet.
+The idea comes from particle physics, where it has been standard since the
+1980s: analyse the data with the answer hidden, finalise every decision, and
+only then unblind.
 
-. . .
+The payoff is that you can inspect your real data and fix its real problems
+while the quantity you might be tempted to optimise towards is not visible.
 
-**Reproducibility** lets someone re-run your analysis — and get your biased
-result again, faithfully.
+Unblinding happens once, at the end, and you report what comes out.
 
-. . .
+## It is a protocol, not a lock
 
-Neither lets you look at your actual data *and* keep your hands clean.
+Blinding is not encryption. It works the way not opening the randomisation
+envelope works — because people agree to follow it.
 
-# Blind analysis
+Today you will have the unblinded data sitting on your laptop, and the exercise
+depends on you simply not looking at it. That is also how it goes in a
+real lab. The tooling only has to make the honest path convenient.
 
-## The idea
-
-Physicists have done this since the 1980s.
-
-> Analyse the data with the answer hidden. Finalise every decision. **Then**
-> unblind — and report whatever comes out.
-
-::: {.fragment}
-You get to inspect your real data, find its real problems, and fix them — while
-the thing you would be tempted to optimise towards is not visible.
-:::
-
-::: {.fragment}
-Unblinding is the last step, and it is irreversible.
-:::
-
-## What blinding is not
-
-It is **not** encryption.
-
-. . .
-
-It is a protocol people follow, like not opening the randomisation envelope.
-Today you will have the real data sitting on your laptop and simply not look at
-it.
-
-. . .
-
-That is exactly how it works in real labs. The technology only has to make the
-honest path easy.
-
-# `vazul`
-
-## Two operations
+## What vazul does
 
 ::: {.columns}
 ::: {.column width="50%"}
 ### Masking
+
 `mask_labels()`, `mask_variables()`, `mask_names()`
 
-Replace values with anonymous labels.
-
-*Hides what a category means.*
+Values are replaced by anonymous labels. Hides what a category means.
 :::
 ::: {.column width="50%"}
 ### Scrambling
+
 `scramble_values()`, `scramble_variables()`
 
-Keep the values, shuffle the order.
-
-*Breaks a link between columns.*
+Values are kept but reordered. Breaks the link between columns.
 :::
 :::
 
-. . .
+Most protocols end up using both. The name, incidentally, comes from Vazul, an
+11th-century Hungarian prince who was blinded to make him ineligible for the
+throne.
 
-Most protocols need both.
+## Which side do you blind? {.smaller}
 
-## The name
+Blinding works by breaking the link between predictor and outcome, and a link has
+two ends. Scrambling the predictors and scrambling the outcome both do the job,
+so the question is really which side you still need intact.
 
-Vazul was an 11th-century Hungarian prince.
+- **Scramble the predictors** when the outcome has to stay usable on its own:
+  scale reliability, factor structure, the shape of the outcome distribution.
+- **Scramble the outcome** when the predictors have to stay intact — to check
+  whether randomisation actually balanced the groups, because the design
+  structure is carried by those columns, or simply because there are many
+  predictors and only one outcome.
 
-He was blinded by the king to make him unfit for the throne.
+In experiments there is often a third option: mask the condition labels instead.
+You can still see that the groups differ, you just cannot tell which group is
+which — and not knowing the direction is usually enough.
 
-::: {.fragment}
-The package is gentler.
-:::
-
-## The only question that matters
-
-> **After this transformation, which analyses still give the right answer?**
-
-. . .
-
-| | distributions | within-block *r* | cross-column *r* | cluster means |
-|---|---|---|---|---|
-| mask | labels only | — | kept | kept |
-| scramble | kept | **gone** | **gone** | gone |
-| `.together` | kept | kept | **gone** | gone |
-| `.groups` | kept | **gone** | **gone** | **kept** |
-| both | kept | kept | **gone** | **kept** |
-
-. . .
-
-The bottom row is what a confirmatory blinding usually wants.
+One thing not to do by accident: scramble both sides independently. That breaks
+the link twice over and throws away more than you meant to.
 
 ## Grouped scrambling
 
-If your data is clustered — participants in countries, patients in clinics —
-scramble **within** the cluster.
+If the data are clustered — participants in countries, patients in clinics — it
+matters a great deal whether you scramble across the whole dataset or within
+each cluster.
 
-. . .
+Scrambling globally hides your effect, but it also flattens the differences
+between clusters. That means you lose the ability to notice a site that used a
+mistranslated questionnaire, a sample that isn't what you assumed, or a clinic
+that entered a scale backwards.
 
-Scramble globally and you do not just hide your effect. You hide:
+Those are exactly the problems blind analysis is supposed to help you find, so
+this argument is worth getting right.
 
-- a site that used a mistranslated questionnaire
-- a country whose sample is not what you think it is
-- a clinic that entered the scale backwards
+## What each operation preserves {.smaller}
 
-. . .
+| | distributions | *r* within block | *r* with other columns | cluster means |
+|---|:---:|:---:|:---:|:---:|
+| mask | ✅ | — | ✅ | ✅ |
+| scramble | ✅ | ❌ | ❌ | ❌ |
+| `.together` | ✅ | ✅ | ❌ | ❌ |
+| `.groups` | ✅ | ❌ | ❌ | ✅ |
+| both | ✅ | ✅ | ❌ | ✅ |
 
-Those are the things blind analysis exists to let you find.
+*block* = the columns in one `scramble_variables()` call ·
+*cluster* = the grouping named in `.groups`
+
+✅ preserved · ❌ destroyed · masking changes only the category names
+
+The last row is what a confirmatory blinding usually wants.
 
 ## Walkthrough
 
-Open `exercises/03_blinding/03a_vazul_walkthrough.qmd` and run along.
+Open `exercises/03_blinding/03a_vazul_walkthrough.qmd` and we will run through
+it together.
 
 # The task
 
-## What you will do
+## Structure of the task
 
-::: {.columns}
-::: {.column width="50%"}
-**Blind**
+You will work in pairs. Each of you blinds the MARP data and sends the blinded
+file to your partner through a pull request. Then each of you analyses the file
+your partner sent, without knowing their seed or their choices.
 
-Write your own blinding script from a written spec, verify it, and send it to
-your partner through a pull request.
-:::
-::: {.column width="50%"}
-**Analyse**
-
-Take the file *they* sent you. You do not know their seed or their choices.
-Decide everything. Then unblind.
-:::
-:::
-
-. . .
-
-Everyone does both. Nobody waits.
+Everyone does both jobs at the same time, so nobody is waiting on a role.
 
 ## One hypothesis
 
-> **H1. People who are more religious report higher well-being.**
+> H1. People who are more religious report higher well-being.
 
-MARP data: 10,535 participants, 24 countries.
+MARP: 10,535 participants across 24 countries.
 
-. . .
+Your blinded estimate will come out at zero, because scrambling removes the
+association entirely. That is expected and not a sign that something broke.
 
-Your blinded estimate will be **zero**. By construction.
+The point of fitting the model blind is to commit to a pipeline — exclusions,
+covariates, model form, how you handle anything odd — at a moment when those
+choices cannot be bent toward a preferred answer.
 
-. . .
+## What you are actually practising
 
-You are not here to find a result. You are here to commit to a pipeline at a
-moment when it cannot be bent.
+At some point in the analysis you will find something in the data that needs a
+judgment call.
 
-## The moment that matters
+You will have to write down what you decided, and why, before you unblind. That
+is the part worth practising; the rest is scaffolding to get you there.
 
-At some point you will see something in the data that requires a judgment call.
+## Getting started
 
-. . .
+`exercises/03_blinding/03b_task_brief.qmd`
 
-You will have to decide what to do about it **in writing**, before you unblind —
-without knowing which way it cuts.
+- find a partner, swap GitHub usernames
+- repository up in about five minutes
+- blinded and checked by :20
+- pull requests exchanged by :30
+- analysis and unblinding after that
 
-. . .
-
-That is the entire workshop. Everything else is scaffolding.
-
-## Go
-
-`exercises/03_blinding/03b_task_brief.md`
-
-- Find a partner, swap GitHub usernames
-- Repo up in 5 minutes
-- Blinded and verified by :20
-- Pull requests swapped by :30
-- Analysis and unblinding after that
-
-I will be circulating. Ask early.
+I will be walking around. Ask early rather than late.
 
 # Debrief
 
 ## Questions
 
-1. What did you flag, and what did you decide?
-2. Did unblinding make you wish you had decided otherwise?
-3. Did your partner's blinding limit what you could check?
-4. What would you need to do this on your own data?
+1. What did you flag in the data, and what did you decide to do about it?
+2. Did unblinding make you wish you had decided differently?
+3. Did anything about your partner's blinding limit what you could check?
+4. What would you need in order to do this with your own data?
 
-## One more thing
+## A detail we skipped past
 
-We dropped `gdp`, `ethnicity` and `denomination` before you ever saw the data.
+Before you saw the data, `00_preprocess.R` dropped `gdp`, `ethnicity` and
+`denomination`.
 
-. . .
+`gdp` is constant within a country, so a masked country with a GDP of 57,305 is
+identifiable in about ten seconds. `ethnicity` includes values like "Turkish".
 
-`gdp` is constant within country. A masked country with a GDP of 57,305 takes
-ten seconds to identify.
+A mask is only as good as the columns left sitting next to it, and this is a
+common way real blinding protocols leak.
 
-. . .
+## Doing this properly
 
-**A mask is only as good as the columns you left beside it.** This is how real
-blinding protocols leak.
+One piece we left out: showing that you did not quietly edit the analysis after
+unblinding.
 
-## Doing it for real
-
-The piece we skipped: proving you did not edit the analysis after unblinding.
-
-. . .
-
-Put the analysis in one Quarto document with a parameter for which data file it
-reads. Render blinded, commit. Unblind, render again.
-
-. . .
-
-`git diff` between the two commits shows one changed line. That empty diff is
-the evidence — nobody has to take your word for it.
+The usual approach is to put the analysis in a single Quarto document with a
+parameter controlling which data file it reads. Render blinded, commit. Then
+unblind, render again, commit. The diff between those two commits is one line,
+and that is evidence a reader can check rather than take on trust.
 
 ## Thank you
 
-- <https://nthun.github.io/vazul/>
-- MacCoun & Perlmutter (2015), *Nature* **526**, 187
+- <https://nthun.github.io/vazul/> — docs, vignettes, source
+- MacCoun & Perlmutter (2015), *Nature* **526**, 187–189
 - Dutilh, Sarafoglou & Wagenmakers (2019), *Synthese*
 
-`vazul` is on CRAN. Issues and pull requests welcome.
+`vazul` is on CRAN. Issues and pull requests are welcome.

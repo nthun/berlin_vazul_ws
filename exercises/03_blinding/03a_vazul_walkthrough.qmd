@@ -50,7 +50,7 @@ glimpse(williams)
 | | **Masking** | **Scrambling** |
 |---|---|---|
 | What happens to values | replaced by anonymous labels | kept, but reordered |
-| Distribution | destroyed (new labels) | **unchanged** |
+| Distribution | **unchanged** (only the names change) | **unchanged** |
 | Applies to | categorical | numeric or categorical |
 | Typical use | hide *which group is which* | hide *who scored what* |
 | Reversible | only with the key | never |
@@ -317,11 +317,22 @@ type-compatible, since values move between them.
 
 ## What survives what
 
+Two words to pin down first, because both are used loosely elsewhere:
+
+- a **block** is the set of columns you pass to a single `scramble_variables()`
+  call — `c(age, Impuls_1)` in the examples above.
+- a **cluster** is a grouping variable you scramble *within*, named in `.groups`
+  — `ecology` above; elsewhere a clinic, a school, a participant, a country.
+
+So the two correlation columns answer different questions: can the analyst still
+*build* the predictor (within the block), and can they still *relate* it to
+anything else (outside it).
+
 Keep this table next to you during the exercise.
 
 | Operation | Univariate distributions | Correlations *within* the scrambled block | Correlations *with other* columns | Cluster means |
 |---|---|---|---|---|
-| `mask_variables()` | labels changed, counts kept | — | kept | kept |
+| `mask_variables()` | kept (names change only) | — | kept | kept |
 | `scramble_variables()` | kept | **destroyed** | **destroyed** | destroyed |
 | `... .together = TRUE` | kept | kept | **destroyed** | destroyed |
 | `... .groups = "cluster"` | kept | **destroyed** | **destroyed** | **kept** |
@@ -333,7 +344,7 @@ cannot see the effect under test.
 
 ## Your turn
 
-Open `03b_task_brief.md`. You will write your own blinding script from a written
+Open `03b_task_brief.qmd`. You will write your own blinding script from a written
 specification, so the decisions above are now yours to make.
 
 ## Further reading

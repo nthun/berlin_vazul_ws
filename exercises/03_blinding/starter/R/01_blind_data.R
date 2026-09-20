@@ -4,7 +4,7 @@
 # Write the blinding script. There is no single right answer, but there are
 # wrong ones: your partner has to be able to do a real analysis on the result.
 #
-# The full specification is in 03b_task_brief.md. The short version:
+# The full specification is in 03b_task_brief.qmd. The short version:
 #
 #   MASK      country          -- the analyst must not know which country is which
 #   RE-ID     subject          -- the original ids must not survive

@@ -1,4 +1,12 @@
-# Task brief — blind a dataset, analyse a blinded one
+---
+title: "Task brief: blind a dataset, analyse a blinded one"
+subtitle: "Berlin workshop, part 3"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    embed-resources: true
+---
 
 **Time: about 55 minutes.** Work in pairs.
 

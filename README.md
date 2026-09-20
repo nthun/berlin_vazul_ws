@@ -39,7 +39,7 @@ slides/          presentation for each part
 exercises/       run-along material and the task briefs
   03_blinding/
     03a_vazul_walkthrough.qmd   run this alongside part 3
-    03b_task_brief.md           the independent task
+    03b_task_brief.qmd           the independent task
     starter/                    copy this into your own repo
 R/               shared helper scripts
 data/            fallback data

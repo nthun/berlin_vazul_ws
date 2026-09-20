@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Analysis blinding with vazul: a walkthrough</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="03a_vazul_walkthrough_files/libs/clipboard/clipboard.min.js"></script>
+<script src="03a_vazul_walkthrough_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="03a_vazul_walkthrough_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="03a_vazul_walkthrough_files/libs/quarto-html/popper.min.js"></script>
+<script src="03a_vazul_walkthrough_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="03a_vazul_walkthrough_files/libs/quarto-html/anchor.min.js"></script>
+<link href="03a_vazul_walkthrough_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="03a_vazul_walkthrough_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="03a_vazul_walkthrough_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="03a_vazul_walkthrough_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="03a_vazul_walkthrough_files/libs/bootstrap/bootstrap-215b371544c282197b31c8aa00ce3677.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#what-this-is" id="toc-what-this-is" class="nav-link active" data-scroll-target="#what-this-is">What this is</a></li>
+  <li><a href="#two-ways-to-blind" id="toc-two-ways-to-blind" class="nav-link" data-scroll-target="#two-ways-to-blind">Two ways to blind</a></li>
+  <li><a href="#masking" id="toc-masking" class="nav-link" data-scroll-target="#masking">Masking</a>
+  <ul class="collapse">
+  <li><a href="#mask_labels-one-vector" id="toc-mask_labels-one-vector" class="nav-link" data-scroll-target="#mask_labels-one-vector"><code>mask_labels()</code> — one vector</a></li>
+  <li><a href="#mask_variables-columns-in-a-data-frame" id="toc-mask_variables-columns-in-a-data-frame" class="nav-link" data-scroll-target="#mask_variables-columns-in-a-data-frame"><code>mask_variables()</code> — columns in a data frame</a></li>
+  <li><a href="#mask_names-the-column-names-themselves" id="toc-mask_names-the-column-names-themselves" class="nav-link" data-scroll-target="#mask_names-the-column-names-themselves"><code>mask_names()</code> — the column names themselves</a></li>
+  </ul></li>
+  <li><a href="#scrambling" id="toc-scrambling" class="nav-link" data-scroll-target="#scrambling">Scrambling</a>
+  <ul class="collapse">
+  <li><a href="#scramble_values-one-vector" id="toc-scramble_values-one-vector" class="nav-link" data-scroll-target="#scramble_values-one-vector"><code>scramble_values()</code> — one vector</a></li>
+  <li><a href="#scramble_variables-columns-in-a-data-frame" id="toc-scramble_variables-columns-in-a-data-frame" class="nav-link" data-scroll-target="#scramble_variables-columns-in-a-data-frame"><code>scramble_variables()</code> — columns in a data frame</a></li>
+  <li><a href="#together-true-keep-a-block-intact" id="toc-together-true-keep-a-block-intact" class="nav-link" data-scroll-target="#together-true-keep-a-block-intact"><code>.together = TRUE</code> — keep a block intact</a></li>
+  </ul></li>
+  <li><a href="#grouped-scrambling" id="toc-grouped-scrambling" class="nav-link" data-scroll-target="#grouped-scrambling">Grouped scrambling</a>
+  <ul class="collapse">
+  <li><a href="#the-problem" id="toc-the-problem" class="nav-link" data-scroll-target="#the-problem">The problem</a></li>
+  <li><a href="#why-you-should-care" id="toc-why-you-should-care" class="nav-link" data-scroll-target="#why-you-should-care">Why you should care</a></li>
+  <li><a href="#combining-the-arguments" id="toc-combining-the-arguments" class="nav-link" data-scroll-target="#combining-the-arguments">Combining the arguments</a></li>
+  </ul></li>
+  <li><a href="#row-wise-scrambling" id="toc-row-wise-scrambling" class="nav-link" data-scroll-target="#row-wise-scrambling">Row-wise scrambling</a></li>
+  <li><a href="#what-survives-what" id="toc-what-survives-what" class="nav-link" data-scroll-target="#what-survives-what">What survives what</a></li>
+  <li><a href="#your-turn" id="toc-your-turn" class="nav-link" data-scroll-target="#your-turn">Your turn</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading">Further reading</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Analysis blinding with vazul: a walkthrough</h1>
+<p class="subtitle lead">Berlin vazul workshop, part 3</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="what-this-is" class="level2">
+<h2 class="anchored" data-anchor-id="what-this-is">What this is</h2>
+<p>Run this document alongside the presentation. Every chunk is meant to be executed, changed, and executed again. By the end you should be able to answer one question about any blinding decision:</p>
+<blockquote class="blockquote">
+<p><strong>After this transformation, which analyses still give the right answer, and which ones no longer can?</strong></p>
+</blockquote>
+<p>That question is the whole subject. The functions are easy; knowing what you have destroyed is the skill.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(vazul)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_light</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>We use the <code>williams</code> dataset here, which ships with <code>vazul</code>. It is small and easy to eyeball: a two-group experiment where participants rated a target person after being told the target lived in a “Desperate” or a “Hopeful” ecology.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(williams)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(williams)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 112
+Columns: 25
+$ subject             &lt;chr&gt; "A30MP4LXV4MIFD", "A16X5FB3HAFCKN", "A1E9D1OT9VJYD…
+$ SexUnres_1          &lt;dbl&gt; 5, 7, 2, 5, 5, 5, 5, 4, 6, 4, 5, 3, 5, 6, 3, 6, 2,…
+$ SexUnres_2          &lt;dbl&gt; 3, 7, 4, 4, 5, 6, 6, 6, 5, 4, 5, 2, 5, 3, 2, 3, 1,…
+$ SexUnres_3          &lt;dbl&gt; 2, 7, 6, 5, 6, 6, 5, 5, 6, 4, 7, 3, 5, 3, 3, 6, 3,…
+$ SexUnres_4_r        &lt;dbl&gt; 3, 4, 3, 3, 3, 3, 3, 2, 3, 1, 3, 3, 3, 2, 3, 3, 4,…
+$ SexUnres_5_r        &lt;dbl&gt; 2, 2, 3, 3, 3, 2, 4, 3, 2, 1, 2, 2, 4, 6, 3, 1, 3,…
+$ Impuls_1            &lt;dbl&gt; 3, 6, 3, 4, 5, 5, 5, 6, 6, 1, 6, 2, 4, 7, 5, 4, 5,…
+$ Impuls_2_r          &lt;dbl&gt; 3, 2, 3, 4, 2, 3, 3, 2, 3, 1, 3, 2, 3, 6, 3, 3, 7,…
+$ Impul_3_r           &lt;dbl&gt; 2, 1, 3, 4, 4, 3, 2, 3, 2, 1, 4, 1, 4, 5, 3, 3, 5,…
+$ Opport_1            &lt;dbl&gt; 1, 5, 3, 4, 4, 4, 5, 5, 5, 1, 7, 3, 5, 7, 5, 2, 6,…
+$ Opport_2            &lt;dbl&gt; 2, 7, 5, 4, 6, 3, 5, 4, 4, 4, 6, 4, 6, 5, 2, 3, 4,…
+$ Opport_3            &lt;dbl&gt; 2, 7, 5, 4, 4, 4, 6, 5, 5, 1, 7, 3, 5, 5, 5, 3, 1,…
+$ Opport_4            &lt;dbl&gt; 3, 6, 3, 5, 4, 6, 5, 5, 4, 4, 6, 3, 6, 4, 4, 3, 3,…
+$ Opport_5            &lt;dbl&gt; 1, 6, 3, 4, 5, 4, 6, 6, 4, 1, 6, 3, 6, 5, 5, 4, 6,…
+$ Opport_6_r          &lt;dbl&gt; 3, 2, 3, 4, 3, 3, 2, 2, 3, 2, 1, 3, 1, 6, 4, 3, 4,…
+$ InvEdu_1_r          &lt;dbl&gt; 2, 3, 2, 3, 4, 3, 3, 3, 3, 2, 3, 4, 4, 4, 3, 1, 6,…
+$ InvEdu_2_r          &lt;dbl&gt; 3, 2, 3, 4, 3, 4, 2, 3, 4, 1, 2, 2, 3, 7, 4, 1, 3,…
+$ InvChild_1          &lt;dbl&gt; 2, 5, 6, 5, 5, 5, 6, 5, 6, 1, 5, 2, 4, 4, 5, 2, 6,…
+$ InvChild_2_r        &lt;dbl&gt; 3, 2, 3, 4, 3, 4, 2, 4, 3, 2, 4, 2, 3, 7, 3, 2, 6,…
+$ age                 &lt;dbl&gt; 34, 30, 40, 35, 26, 33, 33, 30, 48, 33, 40, 39, 25…
+$ gender              &lt;dbl&gt; 1, 1, 1, 2, 2, 2, 2, 1, 2, 2, 1, 1, 2, 1, 1, 2, 1,…
+$ ecology             &lt;chr&gt; "Hopeful", "Desperate", "Desperate", "Hopeful", "D…
+$ duration_in_seconds &lt;dbl&gt; 164, 100, 47, 31, 40, 32, 98, 34, 32, 87, 71, 103,…
+$ attention_1         &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0,…
+$ attention_2         &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1,…</code></pre>
+</div>
+</div>
+</section>
+<section id="two-ways-to-blind" class="level2">
+<h2 class="anchored" data-anchor-id="two-ways-to-blind">Two ways to blind</h2>
+<p><code>vazul</code> offers two families of functions, and they do genuinely different things.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Masking</strong></th>
+<th><strong>Scrambling</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>What happens to values</td>
+<td>replaced by anonymous labels</td>
+<td>kept, but reordered</td>
+</tr>
+<tr class="even">
+<td>Distribution</td>
+<td><strong>unchanged</strong> (only the names change)</td>
+<td><strong>unchanged</strong></td>
+</tr>
+<tr class="odd">
+<td>Applies to</td>
+<td>categorical</td>
+<td>numeric or categorical</td>
+</tr>
+<tr class="even">
+<td>Typical use</td>
+<td>hide <em>which group is which</em></td>
+<td>hide <em>who scored what</em></td>
+</tr>
+<tr class="odd">
+<td>Reversible</td>
+<td>only with the key</td>
+<td>never</td>
+</tr>
+</tbody>
+</table>
+<p>The short version: <strong>masking hides the meaning of a label, scrambling breaks a link between columns.</strong> Most real blinding protocols use both.</p>
+</section>
+<section id="masking" class="level2">
+<h2 class="anchored" data-anchor-id="masking">Masking</h2>
+<section id="mask_labels-one-vector" class="level3">
+<h3 class="anchored" data-anchor-id="mask_labels-one-vector"><code>mask_labels()</code> — one vector</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1037</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mask_labels</span>(williams<span class="sc">$</span>ecology) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "masked_group_01" "masked_group_02" "masked_group_02" "masked_group_01"
+ [5] "masked_group_02" "masked_group_02" "masked_group_02" "masked_group_01"
+ [9] "masked_group_01" "masked_group_02"</code></pre>
+</div>
+</div>
+<p>Three things are true here, and all three matter:</p>
+<ul>
+<li>each unique value gets its own label,</li>
+<li>the same input value always maps to the same label,</li>
+<li><strong>which</strong> label a value gets is random, so the order of the labels tells you nothing.</li>
+</ul>
+<p>That last point is why you must not “helpfully” sort the groups before masking. If <code>masked_group_01</code> were always the alphabetically first condition, the mask would be decorative.</p>
+</section>
+<section id="mask_variables-columns-in-a-data-frame" class="level3">
+<h3 class="anchored" data-anchor-id="mask_variables-columns-in-a-data-frame"><code>mask_variables()</code> — columns in a data frame</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1037</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>williams <span class="sc">|&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mask_variables</span>(ecology) <span class="sc">|&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(ecology)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">ecology</th>
+<th style="text-align: right;">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">ecology_group_01</td>
+<td style="text-align: right;">56</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">ecology_group_02</td>
+<td style="text-align: right;">56</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>The group sizes are still there — masking hides labels, not counts. If your design has unequal group sizes and the analyst knows that, masking alone may not blind them. Worth remembering; it is the most common way a mask leaks.</p>
+</section>
+<section id="mask_names-the-column-names-themselves" class="level3">
+<h3 class="anchored" data-anchor-id="mask_names-the-column-names-themselves"><code>mask_names()</code> — the column names themselves</h3>
+<p>Sometimes the variable <em>names</em> are the bias. If you are deciding how many factors to extract, knowing that five items are called <code>Impuls_*</code> makes it very hard to see a four-factor solution.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">84</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>masked_items <span class="ot">&lt;-</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  williams <span class="sc">|&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mask_names</span>(<span class="fu">starts_with</span>(<span class="st">"SexUnres"</span>), <span class="at">prefix =</span> <span class="st">"A_"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mask_names</span>(<span class="fu">starts_with</span>(<span class="st">"Impul"</span>),    <span class="at">prefix =</span> <span class="st">"B_"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mask_names</span>(<span class="fu">starts_with</span>(<span class="st">"Opport"</span>),   <span class="at">prefix =</span> <span class="st">"C_"</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(masked_items) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">20</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "subject"      "A_03"         "A_04"         "A_02"         "A_01"        
+ [6] "A_05"         "B_02"         "B_03"         "B_01"         "C_05"        
+[11] "C_06"         "C_02"         "C_01"         "C_04"         "C_03"        
+[16] "InvEdu_1_r"   "InvEdu_2_r"   "InvChild_1"   "InvChild_2_r" "age"         </code></pre>
+</div>
+</div>
+<p>In a real protocol you would randomise which prefix goes to which scale, so that even the prefix ordering carries no information. See the package vignette <code>vignette("using_mask_names", package = "vazul")</code> for that pattern, and for <code>keep_suffixes</code>, which lets you preserve <code>_r</code> so the analyst can still reverse-code.</p>
+</section>
+</section>
+<section id="scrambling" class="level2">
+<h2 class="anchored" data-anchor-id="scrambling">Scrambling</h2>
+<section id="scramble_values-one-vector" class="level3">
+<h3 class="anchored" data-anchor-id="scramble_values-one-vector"><code>scramble_values()</code> — one vector</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1037</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>original  <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>scrambled <span class="ot">&lt;-</span> <span class="fu">scramble_values</span>(original)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>scrambled</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 4 3 2 1 4 2 3 3 4 4</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(original)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>original
+1 2 3 4 
+1 2 3 4 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(scrambled)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>scrambled
+1 2 3 4 
+1 2 3 4 </code></pre>
+</div>
+</div>
+<p>Identical distribution, different order. Nothing about the variable <em>in isolation</em> has changed. What has changed is its relationship to every other column.</p>
+</section>
+<section id="scramble_variables-columns-in-a-data-frame" class="level3">
+<h3 class="anchored" data-anchor-id="scramble_variables-columns-in-a-data-frame"><code>scramble_variables()</code> — columns in a data frame</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2024</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>williams <span class="sc">|&gt;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scramble_variables</span>(<span class="fu">c</span>(age, Impuls_1)) <span class="sc">|&gt;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(subject, ecology, age, Impuls_1) <span class="sc">|&gt;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">subject</th>
+<th style="text-align: left;">ecology</th>
+<th style="text-align: right;">age</th>
+<th style="text-align: right;">Impuls_1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">A30MP4LXV4MIFD</td>
+<td style="text-align: left;">Hopeful</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">A16X5FB3HAFCKN</td>
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">7</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">A1E9D1OT9VJYDZ</td>
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">A16FPOYD7566WI</td>
+<td style="text-align: left;">Hopeful</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">A11NOTVHWST7Y3</td>
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>By default each selected column is scrambled <strong>independently</strong>. Watch what that costs:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2024</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>cor_original <span class="ot">&lt;-</span> <span class="fu">cor</span>(williams<span class="sc">$</span>age, williams<span class="sc">$</span>Impuls_1, <span class="at">use =</span> <span class="st">"complete.obs"</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>w_indep <span class="ot">&lt;-</span> <span class="fu">scramble_variables</span>(williams, <span class="fu">c</span>(age, Impuls_1))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>cor_indep <span class="ot">&lt;-</span> <span class="fu">cor</span>(w_indep<span class="sc">$</span>age, w_indep<span class="sc">$</span>Impuls_1, <span class="at">use =</span> <span class="st">"complete.obs"</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">original =</span> cor_original, <span class="at">scrambled_independently =</span> cor_indep)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>               original scrambled_independently 
+            -0.32538404              0.01226613 </code></pre>
+</div>
+</div>
+<p>The correlation between the two scrambled columns is now noise. If you needed that correlation — say <code>age</code> is a covariate you intended to adjust for — you have just thrown it away.</p>
+</section>
+<section id="together-true-keep-a-block-intact" class="level3">
+<h3 class="anchored" data-anchor-id="together-true-keep-a-block-intact"><code>.together = TRUE</code> — keep a block intact</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2024</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>w_together <span class="ot">&lt;-</span> <span class="fu">scramble_variables</span>(williams, <span class="fu">c</span>(age, Impuls_1), <span class="at">.together =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>cor_together <span class="ot">&lt;-</span> <span class="fu">cor</span>(w_together<span class="sc">$</span>age, w_together<span class="sc">$</span>Impuls_1, <span class="at">use =</span> <span class="st">"complete.obs"</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">original =</span> cor_original, <span class="at">scrambled_together =</span> cor_together)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          original scrambled_together 
+         -0.325384          -0.325384 </code></pre>
+</div>
+</div>
+<p>Identical to the original. <code>.together = TRUE</code> moves the selected columns <strong>as a unit</strong>: row 1’s pair of values goes to some other row, but stays a pair.</p>
+<p>This is the argument you need whenever the scrambled columns belong to the same construct — a set of items that will be averaged into a composite, or a predictor and its covariate. Scramble them independently and the composite becomes meaningless; scramble them together and it survives intact.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>The rule of thumb
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Scramble <strong>independently</strong> to break links you want broken. Scramble <strong>together</strong> to preserve links you still need.</p>
+<p>Decide which is which <em>before</em> you write the call, not after your partner tells you the data is unusable.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="grouped-scrambling" class="level2">
+<h2 class="anchored" data-anchor-id="grouped-scrambling">Grouped scrambling</h2>
+<p>This is the one you will need for the exercise, so it gets its own section.</p>
+<section id="the-problem" class="level3">
+<h3 class="anchored" data-anchor-id="the-problem">The problem</h3>
+<p>Suppose your data has a cluster structure — participants nested in countries, patients nested in clinics, trials nested in subjects. If you scramble a predictor across the whole dataset, you destroy the cluster structure along with the effect you meant to hide.</p>
+<p><code>williams</code> has no real cluster structure, so we use its two <code>ecology</code> groups to show the mechanic. In the exercise the groups will be countries.</p>
+<p>We scramble <code>Opport_1</code> — a 1–7 rating that differs clearly between the two groups — two ways, and watch what happens to the group means.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>group_means <span class="ot">&lt;-</span> <span class="cf">function</span>(d, label) {</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  d <span class="sc">|&gt;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(ecology) <span class="sc">|&gt;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="at">mean_opport =</span> <span class="fu">mean</span>(Opport_1, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">version =</span> label)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>w_global  <span class="ot">&lt;-</span> <span class="fu">scramble_variables</span>(williams, Opport_1)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>w_grouped <span class="ot">&lt;-</span> <span class="fu">scramble_variables</span>(williams, Opport_1, <span class="at">.groups =</span> <span class="st">"ecology"</span>)</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_means</span>(williams,  <span class="st">"1. original"</span>),</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_means</span>(w_global,  <span class="st">"2. scrambled globally"</span>),</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_means</span>(w_grouped, <span class="st">"3. scrambled within ecology"</span>)</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">pivot_wider</span>(<span class="at">names_from =</span> version, <span class="at">values_from =</span> mean_opport)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 16%">
+<col style="width: 30%">
+<col style="width: 38%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">ecology</th>
+<th style="text-align: right;">1. original</th>
+<th style="text-align: right;">2. scrambled globally</th>
+<th style="text-align: right;">3. scrambled within ecology</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">4.214286</td>
+<td style="text-align: right;">3.714286</td>
+<td style="text-align: right;">4.214286</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hopeful</td>
+<td style="text-align: right;">3.339286</td>
+<td style="text-align: right;">3.839286</td>
+<td style="text-align: right;">3.339286</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>Look at the three columns.</p>
+<ul>
+<li><strong>Original</strong> — the groups differ by about 0.9 scale points.</li>
+<li><strong>Scrambled globally</strong> — the two means have collapsed onto each other. Values moved freely between groups, so the difference has been averaged away.</li>
+<li><strong>Scrambled within ecology</strong> — the means are <strong>exactly</strong> the original ones. Values only ever moved <em>within</em> a group, so each group kept the same set of values it started with.</li>
+</ul>
+</section>
+<section id="why-you-should-care" class="level3">
+<h3 class="anchored" data-anchor-id="why-you-should-care">Why you should care</h3>
+<p>Global scrambling does not just hide the effect you meant to hide. It hides everything the clusters differ on: sample composition, a translation problem, a site that used the wrong scale, a country that administered the questionnaire differently.</p>
+<p>Those are exactly the problems a blind analysis exists to let you find. A blinded dataset should still let you notice that <strong>one cluster is behaving strangely</strong>, even while you have no idea which effect direction you are heading for. Scramble within cluster and you keep that; scramble globally and you have blinded yourself to your own data quality.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_means</span>(williams,  <span class="st">"original"</span>),</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_means</span>(w_global,  <span class="st">"scrambled globally"</span>),</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_means</span>(w_grouped, <span class="st">"scrambled within ecology"</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> ecology, <span class="at">y =</span> mean_opport, <span class="at">fill =</span> version)) <span class="sc">+</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.8</span>), <span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="fl">4.5</span>)) <span class="sc">+</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"ecology (group)"</span>, <span class="at">y =</span> <span class="st">"mean Opport_1"</span>, <span class="at">fill =</span> <span class="cn">NULL</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-grouped" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-grouped-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="03a_vazul_walkthrough_files/figure-html/fig-grouped-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-grouped-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Within-group scrambling leaves the group means untouched; global scrambling flattens them.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="combining-the-arguments" class="level3">
+<h3 class="anchored" data-anchor-id="combining-the-arguments">Combining the arguments</h3>
+<p><code>.groups</code> and <code>.together</code> are independent and compose:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>williams <span class="sc">|&gt;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scramble_variables</span>(<span class="fu">c</span>(Opport_1, Opport_2),</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>                     <span class="at">.groups =</span> <span class="st">"ecology"</span>,</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">.together =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(subject, ecology, Opport_1, Opport_2) <span class="sc">|&gt;</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">subject</th>
+<th style="text-align: left;">ecology</th>
+<th style="text-align: right;">Opport_1</th>
+<th style="text-align: right;">Opport_2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">A30MP4LXV4MIFD</td>
+<td style="text-align: left;">Hopeful</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">A16X5FB3HAFCKN</td>
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">A1E9D1OT9VJYDZ</td>
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">A16FPOYD7566WI</td>
+<td style="text-align: left;">Hopeful</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">A11NOTVHWST7Y3</td>
+<td style="text-align: left;">Desperate</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">6</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>Read that call out loud: <em>move the <code>Opport_1</code>/<code>Opport_2</code> pairs around, but only within an ecology group, and keep each pair together.</em> That sentence is the whole API.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>A grouping column cannot also be a scrambled column
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>.groups</code> must name columns that are <strong>not</strong> in your selection. If you try to scramble <code>ecology</code> within <code>ecology</code>, you get an error — which is the right behaviour, but the message is easier to understand if you were expecting it.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="row-wise-scrambling" class="level2">
+<h2 class="anchored" data-anchor-id="row-wise-scrambling">Row-wise scrambling</h2>
+<p>One more variant, useful for repeated measures in wide format. <code>.byrow = TRUE</code> shuffles values <em>within each row</em>, across the selected columns:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>df_items <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">id    =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>,</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">day_1 =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">4</span>, <span class="dv">7</span>),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">day_2 =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">5</span>, <span class="dv">8</span>),</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">day_3 =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="fu">scramble_variables</span>(df_items, <span class="fu">starts_with</span>(<span class="st">"day_"</span>), <span class="at">.byrow =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">id</th>
+<th style="text-align: right;">day_1</th>
+<th style="text-align: right;">day_2</th>
+<th style="text-align: right;">day_3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">7</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>Each participant keeps their own three values; the order in which they occurred is gone. That blinds a time trend without touching individual differences. The columns must be type-compatible, since values move between them.</p>
+</section>
+<section id="what-survives-what" class="level2">
+<h2 class="anchored" data-anchor-id="what-survives-what">What survives what</h2>
+<p>Two words to pin down first, because both are used loosely elsewhere:</p>
+<ul>
+<li>a <strong>block</strong> is the set of columns you pass to a single <code>scramble_variables()</code> call — <code>c(age, Impuls_1)</code> in the examples above.</li>
+<li>a <strong>cluster</strong> is a grouping variable you scramble <em>within</em>, named in <code>.groups</code> — <code>ecology</code> above; elsewhere a clinic, a school, a participant, a country.</li>
+</ul>
+<p>So the two correlation columns answer different questions: can the analyst still <em>build</em> the predictor (within the block), and can they still <em>relate</em> it to anything else (outside it).</p>
+<p>Keep this table next to you during the exercise.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Operation</th>
+<th>Univariate distributions</th>
+<th>Correlations <em>within</em> the scrambled block</th>
+<th>Correlations <em>with other</em> columns</th>
+<th>Cluster means</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>mask_variables()</code></td>
+<td>kept (names change only)</td>
+<td>—</td>
+<td>kept</td>
+<td>kept</td>
+</tr>
+<tr class="even">
+<td><code>scramble_variables()</code></td>
+<td>kept</td>
+<td><strong>destroyed</strong></td>
+<td><strong>destroyed</strong></td>
+<td>destroyed</td>
+</tr>
+<tr class="odd">
+<td><code>... .together = TRUE</code></td>
+<td>kept</td>
+<td>kept</td>
+<td><strong>destroyed</strong></td>
+<td>destroyed</td>
+</tr>
+<tr class="even">
+<td><code>... .groups = "cluster"</code></td>
+<td>kept</td>
+<td><strong>destroyed</strong></td>
+<td><strong>destroyed</strong></td>
+<td><strong>kept</strong></td>
+</tr>
+<tr class="odd">
+<td><code>... .together</code> + <code>.groups</code></td>
+<td>kept</td>
+<td>kept</td>
+<td><strong>destroyed</strong></td>
+<td><strong>kept</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The bottom row is the one most confirmatory blinding protocols want: the analyst can still compute composites, still compare clusters, still spot a broken site — and still cannot see the effect under test.</p>
+</section>
+<section id="your-turn" class="level2">
+<h2 class="anchored" data-anchor-id="your-turn">Your turn</h2>
+<p>Open <code>03b_task_brief.qmd</code>. You will write your own blinding script from a written specification, so the decisions above are now yours to make.</p>
+</section>
+<section id="further-reading" class="level2">
+<h2 class="anchored" data-anchor-id="further-reading">Further reading</h2>
+<ul>
+<li>MacCoun, R., &amp; Perlmutter, S. (2015). Blind analysis: Hide results to seek the truth. <em>Nature</em>, 526, 187–189. <a href="https://doi.org/10.1038/526187a" class="uri">https://doi.org/10.1038/526187a</a></li>
+<li>Dutilh, G., Sarafoglou, A., &amp; Wagenmakers, E.-J. (2019). Flexible yet fair: Blinding analyses in experimental psychology. <em>Synthese</em>. <a href="https://doi.org/10.1007/s11229-019-02456-7" class="uri">https://doi.org/10.1007/s11229-019-02456-7</a></li>
+<li>Package website: <a href="https://nthun.github.io/vazul/" class="uri">https://nthun.github.io/vazul/</a></li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
