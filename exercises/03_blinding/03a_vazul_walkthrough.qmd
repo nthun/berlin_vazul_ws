@@ -1,0 +1,346 @@
+---
+title: "Analysis blinding with vazul: a walkthrough"
+subtitle: "Berlin vazul workshop, part 3"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    df-print: kable
+editor_options:
+  chunk_output_type: console
+---
+
+## What this is
+
+Run this document alongside the presentation. Every chunk is meant to be executed,
+changed, and executed again. By the end you should be able to answer one question
+about any blinding decision:
+
+> **After this transformation, which analyses still give the right answer, and which ones no longer can?**
+
+That question is the whole subject. The functions are easy; knowing what you have
+destroyed is the skill.
+
+```{r}
+#| label: setup
+#| message: false
+
+library(vazul)
+library(dplyr)
+library(ggplot2)
+
+theme_set(theme_light())
+```
+
+We use the `williams` dataset here, which ships with `vazul`. It is small and easy to
+eyeball: a two-group experiment where participants rated a target person after being
+told the target lived in a "Desperate" or a "Hopeful" ecology.
+
+```{r}
+data(williams)
+
+glimpse(williams)
+```
+
+## Two ways to blind
+
+`vazul` offers two families of functions, and they do genuinely different things.
+
+| | **Masking** | **Scrambling** |
+|---|---|---|
+| What happens to values | replaced by anonymous labels | kept, but reordered |
+| Distribution | destroyed (new labels) | **unchanged** |
+| Applies to | categorical | numeric or categorical |
+| Typical use | hide *which group is which* | hide *who scored what* |
+| Reversible | only with the key | never |
+
+The short version: **masking hides the meaning of a label, scrambling breaks a link
+between columns.** Most real blinding protocols use both.
+
+## Masking
+
+### `mask_labels()` — one vector
+
+```{r}
+set.seed(1037)
+
+mask_labels(williams$ecology) |> head(10)
+```
+
+Three things are true here, and all three matter:
+
+- each unique value gets its own label,
+- the same input value always maps to the same label,
+- **which** label a value gets is random, so the order of the labels tells you nothing.
+
+That last point is why you must not "helpfully" sort the groups before masking. If
+`masked_group_01` were always the alphabetically first condition, the mask would be
+decorative.
+
+### `mask_variables()` — columns in a data frame
+
+```{r}
+set.seed(1037)
+
+williams |>
+  mask_variables(ecology) |>
+  count(ecology)
+```
+
+The group sizes are still there — masking hides labels, not counts. If your design has
+unequal group sizes and the analyst knows that, masking alone may not blind them. Worth
+remembering; it is the most common way a mask leaks.
+
+### `mask_names()` — the column names themselves
+
+Sometimes the variable *names* are the bias. If you are deciding how many factors to
+extract, knowing that five items are called `Impuls_*` makes it very hard to see a
+four-factor solution.
+
+```{r}
+set.seed(84)
+
+masked_items <-
+  williams |>
+  mask_names(starts_with("SexUnres"), prefix = "A_") |>
+  mask_names(starts_with("Impul"),    prefix = "B_") |>
+  mask_names(starts_with("Opport"),   prefix = "C_")
+
+names(masked_items) |> head(20)
+```
+
+In a real protocol you would randomise which prefix goes to which scale, so that even
+the prefix ordering carries no information. See the package vignette
+`vignette("using_mask_names", package = "vazul")` for that pattern, and for
+`keep_suffixes`, which lets you preserve `_r` so the analyst can still reverse-code.
+
+## Scrambling
+
+### `scramble_values()` — one vector
+
+```{r}
+set.seed(1037)
+
+original  <- c(1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
+scrambled <- scramble_values(original)
+
+scrambled
+
+table(original)
+table(scrambled)
+```
+
+Identical distribution, different order. Nothing about the variable *in isolation* has
+changed. What has changed is its relationship to every other column.
+
+### `scramble_variables()` — columns in a data frame
+
+```{r}
+set.seed(2024)
+
+williams |>
+  scramble_variables(c(age, Impuls_1)) |>
+  select(subject, ecology, age, Impuls_1) |>
+  head(5)
+```
+
+By default each selected column is scrambled **independently**. Watch what that costs:
+
+```{r}
+set.seed(2024)
+
+cor_original <- cor(williams$age, williams$Impuls_1, use = "complete.obs")
+
+w_indep <- scramble_variables(williams, c(age, Impuls_1))
+cor_indep <- cor(w_indep$age, w_indep$Impuls_1, use = "complete.obs")
+
+c(original = cor_original, scrambled_independently = cor_indep)
+```
+
+The correlation between the two scrambled columns is now noise. If you needed that
+correlation — say `age` is a covariate you intended to adjust for — you have just
+thrown it away.
+
+### `.together = TRUE` — keep a block intact
+
+```{r}
+set.seed(2024)
+
+w_together <- scramble_variables(williams, c(age, Impuls_1), .together = TRUE)
+cor_together <- cor(w_together$age, w_together$Impuls_1, use = "complete.obs")
+
+c(original = cor_original, scrambled_together = cor_together)
+```
+
+Identical to the original. `.together = TRUE` moves the selected columns **as a unit**:
+row 1's pair of values goes to some other row, but stays a pair.
+
+This is the argument you need whenever the scrambled columns belong to the same
+construct — a set of items that will be averaged into a composite, or a predictor and
+its covariate. Scramble them independently and the composite becomes meaningless;
+scramble them together and it survives intact.
+
+::: {.callout-important}
+## The rule of thumb
+
+Scramble **independently** to break links you want broken.
+Scramble **together** to preserve links you still need.
+
+Decide which is which *before* you write the call, not after your partner tells you the
+data is unusable.
+:::
+
+## Grouped scrambling
+
+This is the one you will need for the exercise, so it gets its own section.
+
+### The problem
+
+Suppose your data has a cluster structure — participants nested in countries, patients
+nested in clinics, trials nested in subjects. If you scramble a predictor across the
+whole dataset, you destroy the cluster structure along with the effect you meant to
+hide.
+
+`williams` has no real cluster structure, so we use its two `ecology` groups to
+show the mechanic. In the exercise the groups will be countries.
+
+We scramble `Opport_1` — a 1–7 rating that differs clearly between the two groups
+— two ways, and watch what happens to the group means.
+
+```{r}
+group_means <- function(d, label) {
+  d |>
+    group_by(ecology) |>
+    summarise(mean_opport = mean(Opport_1, na.rm = TRUE), .groups = "drop") |>
+    mutate(version = label)
+}
+
+set.seed(11)
+
+w_global  <- scramble_variables(williams, Opport_1)
+w_grouped <- scramble_variables(williams, Opport_1, .groups = "ecology")
+
+bind_rows(
+  group_means(williams,  "1. original"),
+  group_means(w_global,  "2. scrambled globally"),
+  group_means(w_grouped, "3. scrambled within ecology")
+) |>
+  tidyr::pivot_wider(names_from = version, values_from = mean_opport)
+```
+
+Look at the three columns.
+
+- **Original** — the groups differ by about 0.9 scale points.
+- **Scrambled globally** — the two means have collapsed onto each other. Values
+  moved freely between groups, so the difference has been averaged away.
+- **Scrambled within ecology** — the means are **exactly** the original ones.
+  Values only ever moved *within* a group, so each group kept the same set of
+  values it started with.
+
+### Why you should care
+
+Global scrambling does not just hide the effect you meant to hide. It hides
+everything the clusters differ on: sample composition, a translation problem, a
+site that used the wrong scale, a country that administered the questionnaire
+differently.
+
+Those are exactly the problems a blind analysis exists to let you find. A blinded
+dataset should still let you notice that **one cluster is behaving strangely**,
+even while you have no idea which effect direction you are heading for. Scramble
+within cluster and you keep that; scramble globally and you have blinded yourself
+to your own data quality.
+
+```{r}
+#| label: fig-grouped
+#| fig-height: 3.2
+#| fig-cap: "Within-group scrambling leaves the group means untouched; global scrambling flattens them."
+
+bind_rows(
+  group_means(williams,  "original"),
+  group_means(w_global,  "scrambled globally"),
+  group_means(w_grouped, "scrambled within ecology")
+) |>
+  ggplot(aes(x = ecology, y = mean_opport, fill = version)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  coord_cartesian(ylim = c(3, 4.5)) +
+  labs(x = "ecology (group)", y = "mean Opport_1", fill = NULL)
+```
+
+### Combining the arguments
+
+`.groups` and `.together` are independent and compose:
+
+```{r}
+set.seed(7)
+
+williams |>
+  scramble_variables(c(Opport_1, Opport_2),
+                     .groups = "ecology",
+                     .together = TRUE) |>
+  select(subject, ecology, Opport_1, Opport_2) |>
+  head(5)
+```
+
+Read that call out loud: *move the `Opport_1`/`Opport_2` pairs around, but only within an
+ecology group, and keep each pair together.* That sentence is the whole API.
+
+::: {.callout-warning}
+## A grouping column cannot also be a scrambled column
+
+`.groups` must name columns that are **not** in your selection. If you try to scramble
+`ecology` within `ecology`, you get an error — which is the right behaviour, but the
+message is easier to understand if you were expecting it.
+:::
+
+## Row-wise scrambling
+
+One more variant, useful for repeated measures in wide format. `.byrow = TRUE` shuffles
+values *within each row*, across the selected columns:
+
+```{r}
+set.seed(123)
+
+df_items <- data.frame(
+  id    = 1:3,
+  day_1 = c(1, 4, 7),
+  day_2 = c(2, 5, 8),
+  day_3 = c(3, 6, 9)
+)
+
+scramble_variables(df_items, starts_with("day_"), .byrow = TRUE)
+```
+
+Each participant keeps their own three values; the order in which they occurred is gone.
+That blinds a time trend without touching individual differences. The columns must be
+type-compatible, since values move between them.
+
+## What survives what
+
+Keep this table next to you during the exercise.
+
+| Operation | Univariate distributions | Correlations *within* the scrambled block | Correlations *with other* columns | Cluster means |
+|---|---|---|---|---|
+| `mask_variables()` | labels changed, counts kept | — | kept | kept |
+| `scramble_variables()` | kept | **destroyed** | **destroyed** | destroyed |
+| `... .together = TRUE` | kept | kept | **destroyed** | destroyed |
+| `... .groups = "cluster"` | kept | **destroyed** | **destroyed** | **kept** |
+| `... .together` + `.groups` | kept | kept | **destroyed** | **kept** |
+
+The bottom row is the one most confirmatory blinding protocols want: the analyst can
+still compute composites, still compare clusters, still spot a broken site — and still
+cannot see the effect under test.
+
+## Your turn
+
+Open `03b_task_brief.md`. You will write your own blinding script from a written
+specification, so the decisions above are now yours to make.
+
+## Further reading
+
+- MacCoun, R., & Perlmutter, S. (2015). Blind analysis: Hide results to seek the truth.
+  *Nature*, 526, 187–189. <https://doi.org/10.1038/526187a>
+- Dutilh, G., Sarafoglou, A., & Wagenmakers, E.-J. (2019). Flexible yet fair: Blinding
+  analyses in experimental psychology. *Synthese*.
+  <https://doi.org/10.1007/s11229-019-02456-7>
+- Package website: <https://nthun.github.io/vazul/>

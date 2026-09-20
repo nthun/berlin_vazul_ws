@@ -1,0 +1,209 @@
+---
+title: "Blind analysis — worked solution"
+subtitle: "Instructor reference. Do not hand out before the debrief."
+format:
+  html:
+    toc: true
+    embed-resources: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r}
+#| label: setup
+#| message: false
+
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(lme4)
+library(vazul)
+
+theme_set(theme_light())
+```
+
+## What participants should find
+
+Three things, in roughly this order of difficulty.
+
+1. **The attention check.** `attention_check` is not binary — it runs 1–7, and
+   only `1` means passed. 340 participants (3%) fail. Filtering is the
+   conventional choice and matches the original MARP protocol.
+2. **Implausible ages.** Eight participants are aged 0–4. The sample is large
+   enough that it makes no practical difference, which is itself a useful thing
+   to demonstrate: not every anomaly needs action.
+3. **The odd cluster.** One masked country sits far below all the others on
+   well-being. This is Japan.
+
+## Load a blinded file
+
+```{r}
+#| label: load
+
+d_raw <- read_csv("data/processed/marp_blinded.csv", show_col_types = FALSE)
+```
+
+## The reveal, ahead of time
+
+```{r}
+#| label: truth
+
+data(marp)
+
+marp |>
+  group_by(country) |>
+  summarise(n = n(),
+            wb = mean(wb_overall_mean, na.rm = TRUE),
+            .groups = "drop") |>
+  arrange(wb) |>
+  head(5) |>
+  mutate(wb = round(wb, 3))
+```
+
+Japan's mean well-being is **3.00**. The next lowest country is **3.49**. The gap
+between Japan and the rest is larger than the gap spanning the other 23
+countries combined.
+
+In the multilevel model, Japan's country intercept is about **−0.40**, against
+**−0.14** for the next most extreme. It is not a borderline case; everyone should
+see it.
+
+## Cleaning
+
+```{r}
+#| label: clean
+
+clean_data <- function(d) {
+  d |>
+    filter(attention_check == 1) |>
+    mutate(
+      gender = recode(gender, man = "Male", woman = "Female", other = "Other"),
+      age    = if_else(age < 15 | age > 95, NA_real_, as.numeric(age))
+    ) |>
+    mutate(
+      rel_z       = as.numeric(scale(rel_mean)),
+      age_z       = as.numeric(scale(age)),
+      ses_z       = as.numeric(scale(ses)),
+      education_z = as.numeric(scale(education))
+    )
+}
+
+d <- clean_data(d_raw)
+c(before = nrow(d_raw), after = nrow(d))
+```
+
+## Model and diagnostics
+
+```{r}
+#| label: model
+
+m_blind <- lmer(
+  wb_overall_mean ~ rel_z + age_z + gender + ses_z + education_z + (1 | country),
+  data = d
+)
+
+round(summary(m_blind)$coefficients, 4)
+```
+
+```{r}
+#| label: fig-ranef
+#| fig-height: 5
+#| fig-cap: "Country intercepts under blinding. One cluster is obvious."
+
+re <- ranef(m_blind)$country
+
+tibble::tibble(country = rownames(re), intercept = re[, 1]) |>
+  mutate(country = forcats::fct_reorder(country, intercept)) |>
+  ggplot(aes(intercept, country)) +
+  geom_vline(xintercept = 0, linetype = 2) +
+  geom_point() +
+  labs(x = "country intercept", y = NULL)
+```
+
+```{r}
+#| label: odd
+
+odd <- rownames(re)[which.min(re[, 1])]
+odd
+```
+
+## The decision, and why it is a good teaching case
+
+A mean of 3.00 against 3.49 for the next country can be two very different
+things:
+
+- **A real difference.** Japan genuinely reports lower subjective well-being on
+  this kind of instrument. This is a well-documented cross-cultural finding.
+- **A measurement artefact.** East Asian respondents use the middle of Likert
+  scales more and the endpoints less. The low mean would then be partly a
+  response-style effect, not a well-being effect.
+
+Nothing in the data settles it. That is the point: participants must make a
+defensible call without the answer, and the honest options are *exclude*,
+*keep*, or *report both*.
+
+The third is the right answer, and almost nobody offers it unprompted.
+
+## Robustness and unblinding
+
+```{r}
+#| label: compare
+
+fixed_effects <- function(model, label) {
+  co <- summary(model)$coefficients
+  tibble::tibble(term = rownames(co), estimate = co[, 1],
+                 se = co[, 2], t = co[, 3], data = label)
+}
+
+m_blind_excl <- update(m_blind, data = filter(d, country != odd))
+
+d_true <-
+  marp |>
+  mutate(
+    rel_mean   = rowMeans(across(rel_1:rel_9), na.rm = TRUE),
+    cnorm_mean = rowMeans(across(c(cnorm_1, cnorm_2)), na.rm = TRUE)
+  ) |>
+  clean_data()
+
+m_true      <- lmer(formula(m_blind), data = d_true)
+m_true_excl <- update(m_true, data = filter(d_true, country != "Japan"))
+
+bind_rows(
+  fixed_effects(m_blind,      "blind"),
+  fixed_effects(m_blind_excl, "blind, Japan out"),
+  fixed_effects(m_true,       "unblind"),
+  fixed_effects(m_true_excl,  "unblind, Japan out")
+) |>
+  filter(term == "rel_z") |>
+  select(data, estimate, se, t) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4)))
+```
+
+## The punchline for the debrief
+
+The religiosity coefficient is **0.064** with Japan in and **0.064** with Japan
+out. The decision that everyone agonised over turns out not to matter at all.
+
+This is the best possible outcome for teaching, and worth saying plainly:
+
+> We can state that the exclusion did not drive the result **because we decided
+> before we could see it**. Had we chosen after unblinding, the same number would
+> carry no weight — a reader would have no way to tell whether we tried it both
+> ways and reported the one we preferred.
+
+Blind analysis does not usually change your estimate. It changes what your
+estimate is *worth*.
+
+## Common failure modes
+
+| What they did | What breaks | What `check_blinding.R` says |
+|---|---|---|
+| Scrambled each column separately | `rel_mean` no longer matches the items | "Composite is still consistent with its items" fails |
+| Forgot `.groups = "country"` | Country means flattened, Japan invisible | "Country-level religiosity means are preserved" fails |
+| Filtered the attention check before sending | Analyst has nothing to find | "Data has NOT been cleaned for the analyst" fails |
+| Masked `country` but kept `gdp` | Mask trivially reversible | caught in `00_preprocess.R`; raise it in the debrief |
+| Scrambled `wb_*` too | Nothing left to analyse | "Outcome data is untouched" fails |
+
+If a pair is stuck past the 20-minute mark, hand them
+`solutions/03_blinding/01_blind_data_solution.R` and let them get to the
+analysis. The analysis is where the lesson is.

@@ -1,0 +1,169 @@
+# Task brief — blind a dataset, analyse a blinded one
+
+**Time: about 55 minutes.** Work in pairs.
+
+You will blind the MARP data, send it to your partner, and analyse the file your
+partner sends you. You will not know how they blinded it, and they will not know
+how you blinded yours.
+
+---
+
+## The pairing
+
+Everybody does the same four things at the same time. Nobody waits for a role.
+
+```
+          you                              your partner
+  ┌──────────────────────┐          ┌──────────────────────┐
+  │ blind the data       │ ──PR──▶  │ their repo           │
+  │ your repo            │  ◀──PR── │ blind the data       │
+  ├──────────────────────┤          ├──────────────────────┤
+  │ analyse what they    │          │ analyse what you     │
+  │ sent you             │          │ sent them            │
+  └──────────────────────┘          └──────────────────────┘
+```
+
+Find your partner now and swap GitHub usernames.
+
+---
+
+## Step 1 — Make your repository (5 min)
+
+1. Copy the `starter/` folder out of the workshop repo to somewhere of your own.
+2. Rename it to something like `vazul-task-yourname`.
+3. Create a new **public** repository on GitHub with that name. Do not add a
+   README — you already have one.
+4. In RStudio: open the folder, then
+
+```bash
+git init
+git add .
+git commit -m "Start blinding task"
+git branch -M main
+git remote add origin https://github.com/YOURNAME/vazul-task-yourname.git
+git push -u origin main
+```
+
+5. Paste the repo URL into the chat and send it to your partner.
+
+---
+
+## Step 2 — Blind the data (20 min)
+
+Open `R/01_blind_data.R` and write it. `R/00_preprocess.R` is given to you and
+loads the data and builds the composites — run it first.
+
+### What the blinded file must look like
+
+| | Variable | Requirement |
+|---|---|---|
+| **Mask** | `country` | The analyst must be able to tell the 24 countries apart, but not know which is which. |
+| **Re-identify** | `subject` | The original ids must not survive. |
+| **Scramble** | `rel_1`–`rel_9`, `rel_mean`, `cnorm_1`, `cnorm_2`, `cnorm_mean` | Break the link between religiosity and well-being. |
+| **Leave alone** | all `wb_*`, `age`, `gender`, `ses`, `education`, `sample_type`, `compensation`, `attention_check` | The analyst needs these exactly as they are. |
+| **Shuffle** | row order | So the file cannot be lined up against the original by position. |
+
+### Two constraints on the scramble
+
+These are the whole exercise. Decide how to satisfy them before you write code.
+
+**(a) `rel_mean` must stay consistent with the `rel_*` items.** If the analyst
+recomputes the composite from the items, they must get the same numbers. So the
+religiosity variables have to move **as a block**, not one at a time.
+
+**(b) Country-level means must be exactly unchanged.** The analyst must still be
+able to see that some countries are more religious than others, and that one
+country behaves oddly. So values must never move **between** countries.
+
+Each constraint corresponds to one argument of one `vazul` function. Finding
+which is the point.
+
+### Do not clean the data
+
+No filtering, no recoding, no outlier handling. Send it as it comes. Cleaning
+decisions belong to the analyst, and if you make them first you have taken the
+interesting part of the job away from your partner.
+
+### Why four columns were already dropped
+
+`00_preprocess.R` removes `gdp`, `gdp_scaled`, `ethnicity` and `denomination`
+before you get the data. `gdp` is constant within a country, so a masked country
+with a GDP of 57,305 takes about ten seconds to identify. `ethnicity` has values
+like "Turkish". `denomination` would let an analyst reconstruct religiosity
+without touching the `rel_*` items at all.
+
+A mask is only as good as the columns you left next to it. This is the most
+common way real blinding protocols leak.
+
+### Before you send it
+
+```r
+source("R/check_blinding.R")
+```
+
+This compares your file against the original and reports pass/fail on each
+requirement. You can run it because you still have the original; your partner
+cannot. Verifying the blinding is the blinder's job.
+
+Fix anything that fails, then write your seed and your choices into
+`blinding_log.md`.
+
+---
+
+## Step 3 — Swap files (8 min)
+
+Use a fork and a pull request. Do **not** send collaborator invitations — they
+have to be accepted by email and it will cost the room ten minutes.
+
+1. Go to your partner's repo on GitHub and click **Fork**.
+2. Clone your fork, copy in **your** `data/processed/marp_blinded.csv` and your
+   `blinding_log.md` (rename it `blinding_log_yourname.md` so it does not clash).
+3. Commit, push to your fork, and open a pull request against their `main`.
+4. Review and merge the pull request **they** opened on your repo.
+5. `git pull` on your own repo. You now have their blinded file.
+
+> **If anything goes wrong here, do not lose the analysis.** A fallback blinded
+> file is in the workshop repo at `data/processed/marp_blinded_fallback.csv`.
+> Use it, carry on, and fix the git afterwards.
+
+---
+
+## Step 4 — Analyse (20 min), then unblind
+
+### Restart R first
+
+Session → Restart R. Clear your environment. You have the real MARP data
+installed on this machine and the exercise only works if you leave it alone.
+
+This is not a technicality — it is how blind analysis works in practice.
+Blinding is a protocol that people follow, not a lock.
+
+### The hypothesis
+
+> **H1. People who are more religious report higher well-being.**
+
+One hypothesis. Resist the urge to look at anything else.
+
+### What to do
+
+Open `analysis/02_analysis.qmd` and work through it. The EDA and the diagnostic
+plots are written for you — today's skill is reading them and deciding what to
+do, not typing `ggplot` calls. The model has three levels of hint, from a
+sentence to a pasteable `lmer()` call. Take whichever gets you moving.
+
+You will be asked to commit to a decision about the data **in writing** before
+you unblind. Do that honestly; the whole session turns on that one moment.
+
+### Deliverable
+
+Render the document, commit it, push. If there is time, turn on GitHub Pages and
+send your partner the link.
+
+---
+
+## What we will discuss at the end
+
+- What did you decide to do about the odd cluster, and why?
+- Did knowing the answer afterwards make you wish you had decided differently?
+- Did your partner's blinding choices limit what you could check?
+- What would you need to add to do this on your own data?

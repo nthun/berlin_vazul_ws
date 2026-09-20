@@ -1,0 +1,294 @@
+---
+title: "Analysis blinding"
+subtitle: "Berlin workshop · part 3"
+author: "Tamás Nagy"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    incremental: false
+    embed-resources: true
+    width: 1280
+    height: 720
+editor_options:
+  chunk_output_type: console
+---
+
+## Where we are
+
+1. Version control — *your history is public and ordered*
+2. Literate programming — *your analysis is one executable document*
+3. **Analysis blinding** — *your decisions are made before you can bend them*
+
+. . .
+
+The first two are useful on their own. The third only works if you have them.
+
+# The problem
+
+## Degrees of freedom
+
+Between raw data and a p-value, an analyst makes dozens of choices:
+
+::: {.columns}
+::: {.column width="50%"}
+- which cases to exclude
+- how to treat outliers
+- which covariates to adjust for
+- how to code a variable
+:::
+::: {.column width="50%"}
+- which model to fit
+- which observations are "failed"
+- what to do about a strange site
+- when to stop looking
+:::
+:::
+
+. . .
+
+Each is defensible. Each is made **after** you can see which way it pushes.
+
+## This is not about dishonesty
+
+You do not need bad intentions to get a biased result.
+
+. . .
+
+You need only to look a little harder for problems in the data when the result
+disagrees with you, and a little less hard when it agrees.
+
+. . .
+
+Nobody is immune. Not you, not me, not the person whose method you trust most.
+
+## The standard fixes are incomplete
+
+**Preregistration** fixes the plan before the data exists — but you cannot
+preregister decisions about data quality you have not seen yet.
+
+. . .
+
+**Reproducibility** lets someone re-run your analysis — and get your biased
+result again, faithfully.
+
+. . .
+
+Neither lets you look at your actual data *and* keep your hands clean.
+
+# Blind analysis
+
+## The idea
+
+Physicists have done this since the 1980s.
+
+> Analyse the data with the answer hidden. Finalise every decision. **Then**
+> unblind — and report whatever comes out.
+
+::: {.fragment}
+You get to inspect your real data, find its real problems, and fix them — while
+the thing you would be tempted to optimise towards is not visible.
+:::
+
+::: {.fragment}
+Unblinding is the last step, and it is irreversible.
+:::
+
+## What blinding is not
+
+It is **not** encryption.
+
+. . .
+
+It is a protocol people follow, like not opening the randomisation envelope.
+Today you will have the real data sitting on your laptop and simply not look at
+it.
+
+. . .
+
+That is exactly how it works in real labs. The technology only has to make the
+honest path easy.
+
+# `vazul`
+
+## Two operations
+
+::: {.columns}
+::: {.column width="50%"}
+### Masking
+`mask_labels()`, `mask_variables()`, `mask_names()`
+
+Replace values with anonymous labels.
+
+*Hides what a category means.*
+:::
+::: {.column width="50%"}
+### Scrambling
+`scramble_values()`, `scramble_variables()`
+
+Keep the values, shuffle the order.
+
+*Breaks a link between columns.*
+:::
+:::
+
+. . .
+
+Most protocols need both.
+
+## The name
+
+Vazul was an 11th-century Hungarian prince.
+
+He was blinded by the king to make him unfit for the throne.
+
+::: {.fragment}
+The package is gentler.
+:::
+
+## The only question that matters
+
+> **After this transformation, which analyses still give the right answer?**
+
+. . .
+
+| | distributions | within-block *r* | cross-column *r* | cluster means |
+|---|---|---|---|---|
+| mask | labels only | — | kept | kept |
+| scramble | kept | **gone** | **gone** | gone |
+| `.together` | kept | kept | **gone** | gone |
+| `.groups` | kept | **gone** | **gone** | **kept** |
+| both | kept | kept | **gone** | **kept** |
+
+. . .
+
+The bottom row is what a confirmatory blinding usually wants.
+
+## Grouped scrambling
+
+If your data is clustered — participants in countries, patients in clinics —
+scramble **within** the cluster.
+
+. . .
+
+Scramble globally and you do not just hide your effect. You hide:
+
+- a site that used a mistranslated questionnaire
+- a country whose sample is not what you think it is
+- a clinic that entered the scale backwards
+
+. . .
+
+Those are the things blind analysis exists to let you find.
+
+## Walkthrough
+
+Open `exercises/03_blinding/03a_vazul_walkthrough.qmd` and run along.
+
+# The task
+
+## What you will do
+
+::: {.columns}
+::: {.column width="50%"}
+**Blind**
+
+Write your own blinding script from a written spec, verify it, and send it to
+your partner through a pull request.
+:::
+::: {.column width="50%"}
+**Analyse**
+
+Take the file *they* sent you. You do not know their seed or their choices.
+Decide everything. Then unblind.
+:::
+:::
+
+. . .
+
+Everyone does both. Nobody waits.
+
+## One hypothesis
+
+> **H1. People who are more religious report higher well-being.**
+
+MARP data: 10,535 participants, 24 countries.
+
+. . .
+
+Your blinded estimate will be **zero**. By construction.
+
+. . .
+
+You are not here to find a result. You are here to commit to a pipeline at a
+moment when it cannot be bent.
+
+## The moment that matters
+
+At some point you will see something in the data that requires a judgment call.
+
+. . .
+
+You will have to decide what to do about it **in writing**, before you unblind —
+without knowing which way it cuts.
+
+. . .
+
+That is the entire workshop. Everything else is scaffolding.
+
+## Go
+
+`exercises/03_blinding/03b_task_brief.md`
+
+- Find a partner, swap GitHub usernames
+- Repo up in 5 minutes
+- Blinded and verified by :20
+- Pull requests swapped by :30
+- Analysis and unblinding after that
+
+I will be circulating. Ask early.
+
+# Debrief
+
+## Questions
+
+1. What did you flag, and what did you decide?
+2. Did unblinding make you wish you had decided otherwise?
+3. Did your partner's blinding limit what you could check?
+4. What would you need to do this on your own data?
+
+## One more thing
+
+We dropped `gdp`, `ethnicity` and `denomination` before you ever saw the data.
+
+. . .
+
+`gdp` is constant within country. A masked country with a GDP of 57,305 takes
+ten seconds to identify.
+
+. . .
+
+**A mask is only as good as the columns you left beside it.** This is how real
+blinding protocols leak.
+
+## Doing it for real
+
+The piece we skipped: proving you did not edit the analysis after unblinding.
+
+. . .
+
+Put the analysis in one Quarto document with a parameter for which data file it
+reads. Render blinded, commit. Unblind, render again.
+
+. . .
+
+`git diff` between the two commits shows one changed line. That empty diff is
+the evidence — nobody has to take your word for it.
+
+## Thank you
+
+- <https://nthun.github.io/vazul/>
+- MacCoun & Perlmutter (2015), *Nature* **526**, 187
+- Dutilh, Sarafoglou & Wagenmakers (2019), *Synthese*
+
+`vazul` is on CRAN. Issues and pull requests welcome.

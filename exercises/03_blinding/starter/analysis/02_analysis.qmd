@@ -1,0 +1,423 @@
+---
+title: "Religiosity and well-being: a blind analysis"
+author: "YOUR NAME"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    df-print: kable
+    embed-resources: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(lme4)
+
+theme_set(theme_light())
+```
+
+::: {.callout-important}
+## Before you start
+
+Restart R (Session → Restart R, or Ctrl/Cmd+Shift+F10) and make sure your
+environment is empty. You have the original MARP data installed on this machine.
+The blinding only works if you do not look at it.
+
+This is how blind analysis works in real life too. It is a protocol, not
+encryption.
+:::
+
+## The hypothesis
+
+> **H1. People who are more religious report higher well-being.**
+
+That is the entire confirmatory question. Everything else in this document is in
+service of answering it defensibly.
+
+## The data
+
+```{r}
+#| label: load
+
+d_raw <- read_csv("data/processed/marp_blinded.csv", show_col_types = FALSE)
+
+dim(d_raw)
+```
+
+Your partner blinded this file. You do not know their seed, and you do not know
+which masked country is which.
+
+**What was blinded:** the religiosity variables were scrambled within country, so
+the link between religiosity and well-being is gone. Country labels were masked.
+
+**What was not:** well-being, the covariates, the cluster structure, and every
+country-level mean. Distributions, missingness and data quality problems are all
+exactly as they were in the real data.
+
+::: {.callout-warning}
+## Your blind result will be null. That is not a bug.
+
+Scrambling removes the religiosity–well-being association completely, so the
+coefficient you estimate here will sit on top of zero no matter what you do.
+
+So what is the point of fitting it? You are not here to find a result. You are
+here to commit — to your exclusions, your covariates, your model form and your
+treatment of any odd clusters — at a moment when those choices *cannot* be bent
+towards an answer you like. When you unblind at the end, every one of those
+decisions is already fixed, and you can prove it.
+
+Other blinding schemes leave an effect in place to look at. This one deliberately
+does not.
+:::
+
+### The variables you need
+
+| Variable | What it is |
+|---|---|
+| `wb_overall_mean` | **Outcome.** Mean of 18 well-being items (1–5). Higher = better. |
+| `rel_mean` | **Predictor.** Mean of 9 religiosity items, each scaled 0–1. Higher = more religious. |
+| `country` | **Cluster.** Masked. 24 groups. |
+| `age`, `gender`, `ses`, `education` | Candidate covariates. `ses` and `education` are ordinal integers. |
+| `attention_check` | Attention check score. |
+| `cnorm_mean` | Perceived cultural norm of religiosity. Not needed for H1. |
+
+The composites are built for you — do not rebuild them. The individual items are
+in the file if you want them, but you do not need them today.
+
+## Exploratory data analysis
+
+Run all of this. It is deliberately given to you: the skill being practised today
+is *reading* these outputs and deciding what to do, not writing them.
+
+### Overview
+
+```{r}
+#| label: eda-overview
+
+d_raw |>
+  select(wb_overall_mean, rel_mean, age, ses, education, attention_check) |>
+  summary()
+```
+
+```{r}
+#| label: eda-missing
+
+d_raw |>
+  summarise(across(everything(), ~ sum(is.na(.x)))) |>
+  tidyr::pivot_longer(everything(), names_to = "variable", values_to = "n_missing") |>
+  filter(n_missing > 0) |>
+  arrange(desc(n_missing))
+```
+
+### Categorical variables
+
+```{r}
+#| label: eda-cat
+
+count(d_raw, gender)
+count(d_raw, attention_check)
+count(d_raw, sample_type)
+```
+
+### Distributions
+
+```{r}
+#| label: fig-dist
+#| fig-height: 3
+#| fig-cap: "Outcome and predictor."
+#| warning: false
+
+d_raw |>
+  select(wb_overall_mean, rel_mean, age) |>
+  tidyr::pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 40) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x = NULL, y = NULL)
+```
+
+### The clusters
+
+This is the most informative plot in the document. Read it carefully.
+
+```{r}
+#| label: fig-country
+#| fig-height: 5
+#| fig-cap: "Mean well-being by (masked) country, with 95% CI. Point size = sample size."
+
+d_raw |>
+  group_by(country) |>
+  summarise(
+    n    = n(),
+    mean = mean(wb_overall_mean, na.rm = TRUE),
+    se   = sd(wb_overall_mean, na.rm = TRUE) / sqrt(sum(!is.na(wb_overall_mean))),
+    .groups = "drop"
+  ) |>
+  mutate(country = forcats::fct_reorder(country, mean)) |>
+  ggplot(aes(x = mean, y = country)) +
+  geom_errorbarh(aes(xmin = mean - 1.96 * se, xmax = mean + 1.96 * se), height = 0) +
+  geom_point(aes(size = n)) +
+  scale_size_area(max_size = 4) +
+  labs(x = "mean well-being", y = NULL, size = "n")
+```
+
+```{r}
+#| label: eda-country-table
+
+d_raw |>
+  group_by(country) |>
+  summarise(
+    n         = n(),
+    wb_mean   = mean(wb_overall_mean, na.rm = TRUE),
+    wb_sd     = sd(wb_overall_mean,   na.rm = TRUE),
+    rel_mean_ = mean(rel_mean, na.rm = TRUE),
+    rel_sd    = sd(rel_mean,   na.rm = TRUE),
+    .groups   = "drop"
+  ) |>
+  arrange(wb_mean) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+```
+
+::: {.callout-note}
+## Question 1
+
+Is there anything in the last two outputs you would want to act on before
+fitting a model? Write your answer down *now*, before you go further.
+:::
+
+## Your cleaning decisions
+
+Fill in the body of this function. Everything you decide about which cases to
+keep and how to code variables goes **here and nowhere else**.
+
+Why a function: at the end of the session you will run the identical analysis on
+the unblinded data. If your decisions live in one function, that re-run uses
+exactly the choices you made while blind, and you can prove it. If they are
+scattered through the document, they will drift.
+
+```{r}
+#| label: clean
+
+clean_data <- function(d) {
+  d |>
+    # TODO: which participants should be excluded, if any?
+
+    # TODO: any variables that need recoding?
+
+    # TODO: any implausible values to handle?
+
+    # Standardised versions, so coefficients are comparable. Leave this in.
+    mutate(
+      rel_z       = as.numeric(scale(rel_mean)),
+      age_z       = as.numeric(scale(age)),
+      ses_z       = as.numeric(scale(ses)),
+      education_z = as.numeric(scale(education))
+    )
+}
+
+d <- clean_data(d_raw)
+
+c(before = nrow(d_raw), after = nrow(d))
+```
+
+## The model
+
+Participants are nested in countries, so a model that ignores country will
+understate the uncertainty. Fit something that respects that.
+
+Three levels of hint. Take the lowest one that gets you moving — there is no
+prize for struggling.
+
+::: {.callout-tip collapse="true"}
+## Hint 1 — what to fit, in words
+
+Predict well-being from religiosity, adjusting for the demographic covariates,
+and allow each country to have its own baseline level of well-being.
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint 2 — the specification
+
+```
+outcome    wb_overall_mean
+predictor  rel_z
+covariates age_z, gender, ses_z, education_z
+random     intercept, varying by country
+function   lmer(), from the lme4 package
+```
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint 3 — the call
+
+```r
+m_blind <- lmer(
+  wb_overall_mean ~ rel_z + age_z + gender + ses_z + education_z + (1 | country),
+  data = d
+)
+
+summary(m_blind)
+```
+:::
+
+```{r}
+#| label: model
+
+# TODO: fit your model, call it m_blind
+
+
+```
+
+## Diagnostics
+
+Given to you as well. Run them and interpret.
+
+```{r}
+#| label: fig-resid
+#| fig-height: 4
+#| fig-cap: "Residuals against fitted values, coloured by masked country."
+#| eval: false
+
+mf <- model.frame(m_blind)
+
+tibble::tibble(
+  fitted  = fitted(m_blind),
+  resid   = resid(m_blind),
+  country = mf$country
+) |>
+  ggplot(aes(fitted, resid, colour = country)) +
+  geom_point(alpha = 0.3, size = 0.7, show.legend = FALSE) +
+  geom_hline(yintercept = 0) +
+  labs(x = "fitted", y = "residual")
+```
+
+```{r}
+#| label: fig-ranef
+#| fig-height: 5
+#| fig-cap: "Country intercepts: how far each country sits from the overall mean."
+#| eval: false
+
+re <- ranef(m_blind)$country
+tibble::tibble(country = rownames(re), intercept = re[, 1]) |>
+  mutate(country = forcats::fct_reorder(country, intercept)) |>
+  ggplot(aes(intercept, country)) +
+  geom_vline(xintercept = 0, linetype = 2) +
+  geom_point() +
+  labs(x = "country intercept", y = NULL)
+```
+
+::: {.callout-note}
+## Question 2
+
+One cluster does not look like the others. Before you decide what to do about
+it, consider: you cannot tell whether this is a real difference between
+populations or a problem with how the data was collected there.
+
+- What would make you **exclude** it?
+- What would make you **keep** it?
+- Is there a third option?
+
+You are making this call without knowing which country it is, and without
+knowing whether excluding it helps or hurts H1. That is the point of the
+exercise. Write your reasoning in `blinding_log.md` **now**, while you still
+cannot know the answer.
+:::
+
+## Robustness
+
+Refit without the cluster you flagged, and compare. Whatever you decided above,
+report both — a decision you can show is robust is worth more than a decision you
+merely defend.
+
+```{r}
+#| label: robustness
+
+# TODO: refit excluding the flagged cluster, call it m_blind_excl
+
+
+```
+
+## Unblinding
+
+Stop here until you have written down your decision and your expected result.
+
+**Predict, in writing:** what will the religiosity coefficient be? Positive,
+negative, near zero? Will dropping the odd cluster change it?
+
+Now run it.
+
+```{r}
+#| label: unblind
+#| eval: false
+
+library(vazul)
+data(marp)
+
+d_true <-
+  marp |>
+  mutate(
+    rel_mean   = rowMeans(across(rel_1:rel_9), na.rm = TRUE),
+    cnorm_mean = rowMeans(across(c(cnorm_1, cnorm_2)), na.rm = TRUE)
+  ) |>
+  clean_data()            # <- your decisions, unchanged
+
+m_true <- lmer(
+  formula(m_blind),       # <- your model, unchanged
+  data = d_true
+)
+
+# Pull the fixed effects out of a model, no extra packages needed.
+fixed_effects <- function(model, label) {
+  co <- summary(model)$coefficients
+  tibble::tibble(
+    term     = rownames(co),
+    estimate = co[, 1],
+    se       = co[, 2],
+    t        = co[, 3],
+    data     = label
+  )
+}
+
+bind_rows(
+  fixed_effects(m_blind, "blinded"),
+  fixed_effects(m_true,  "unblinded")
+) |>
+  tidyr::pivot_wider(names_from = data, values_from = c(estimate, se, t)) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4)))
+```
+
+Which country was it?
+
+```{r}
+#| label: reveal
+#| eval: false
+
+d_true |>
+  group_by(country) |>
+  summarise(n = n(), wb = mean(wb_overall_mean, na.rm = TRUE), .groups = "drop") |>
+  arrange(wb) |>
+  head(5)
+```
+
+## Reflection
+
+Answer in a few sentences each, in `blinding_log.md`:
+
+1. Was your prediction right?
+2. Did the estimate move when you excluded the flagged cluster? Would you have
+   made the same call if you had known which country it was, and known what
+   excluding it did to your p-value?
+3. Your partner made different blinding choices than you would have. Did anything
+   about the file they sent limit what you could check?
+4. What would you have to add to this workflow to run a real blind analysis on
+   your own data next month?
