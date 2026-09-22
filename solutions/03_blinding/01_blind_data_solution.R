@@ -21,14 +21,10 @@ marp_blinded <-
   #    .together = TRUE   keeps rel_mean consistent with the rel_* items
   #    .groups = "country" keeps country-level means exactly as they were
   scramble_variables(
-    c(rel_1:rel_9, rel_mean, cnorm_1, cnorm_2, cnorm_mean),
+    c(rel_1:rel_9, rel_mean),
     .together = TRUE,
     .groups   = "country"
-  ) |>
-  # 3. New identifiers, so the file cannot be joined back to the original.
-  mutate(subject = sample(seq_len(n()))) |>
-  # 4. New row order, so it cannot be lined up by position either.
-  slice_sample(prop = 1)
+  )
 
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 readr::write_csv(marp_blinded, "data/processed/marp_blinded.csv")

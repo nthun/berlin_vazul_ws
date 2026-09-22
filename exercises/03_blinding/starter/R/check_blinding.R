@@ -87,18 +87,6 @@ check(
   "The number of masked groups should equal the number of countries (24)."
 )
 
-check(
-  "Original identifiers do not survive",
-  !identical(blinded$subject, marp_prep$subject),
-  "Replace `subject` with a fresh identifier."
-)
-
-check(
-  "Row order has changed",
-  !identical(blinded$wb_overall_mean, marp_prep$wb_overall_mean),
-  "Shuffle the rows, e.g. slice_sample(prop = 1)."
-)
-
 # --- 3. the link under test is broken --------------------------------------
 
 r_orig <- within_cor(mutate(marp_prep, .cl = country), ".cl", "rel_mean", "wb_overall_mean")

@@ -7,17 +7,13 @@
 # The full specification is in 03b_task_brief.qmd. The short version:
 #
 #   MASK      country          -- the analyst must not know which country is which
-#   RE-ID     subject          -- the original ids must not survive
-#   SCRAMBLE  the religiosity block:
-#                 rel_1 ... rel_9, rel_mean, cnorm_1, cnorm_2, cnorm_mean
+#   SCRAMBLE  the religiosity block: rel_1 ... rel_9, rel_mean
 #             ...subject to two constraints:
 #                 (a) rel_mean must stay consistent with the rel_* items,
 #                     i.e. the block has to move as a unit
 #                 (b) country-level means must be unchanged, i.e. values must
 #                     not move between countries
-#   INTACT    everything else: all wb_*, age, gender, ses, education,
-#             sample_type, compensation, attention_check
-#   SHUFFLE   the row order, so the file cannot be lined up against the original
+#   INTACT    everything else, cnorm_* included
 #
 # Do NOT clean the data. No filtering, no recoding. That is the analyst's job.
 #
@@ -37,8 +33,6 @@ marp_blinded <-
   marp_prep |>
   # TODO: mask the country
   # TODO: scramble the religiosity block -- mind constraints (a) and (b) above
-  # TODO: replace `subject` with a new identifier
-  # TODO: shuffle the row order
   identity()
 
 # ---------------------------------------------------------------------------

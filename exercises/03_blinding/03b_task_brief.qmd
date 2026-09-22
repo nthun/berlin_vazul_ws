@@ -66,10 +66,11 @@ loads the data and builds the composites — run it first.
 | | Variable | Requirement |
 |---|---|---|
 | **Mask** | `country` | The analyst must be able to tell the 24 countries apart, but not know which is which. |
-| **Re-identify** | `subject` | The original ids must not survive. |
-| **Scramble** | `rel_1`–`rel_9`, `rel_mean`, `cnorm_1`, `cnorm_2`, `cnorm_mean` | Break the link between religiosity and well-being. |
-| **Leave alone** | all `wb_*`, `age`, `gender`, `ses`, `education`, `sample_type`, `compensation`, `attention_check` | The analyst needs these exactly as they are. |
-| **Shuffle** | row order | So the file cannot be lined up against the original by position. |
+| **Scramble** | `rel_1`–`rel_9`, `rel_mean` | Break the link between religiosity and well-being. |
+| **Leave alone** | everything else | The analyst needs it exactly as it is. |
+
+That is the whole specification. `cnorm_*` plays no part in H1, so leave it be —
+blind what the hypothesis is about, and nothing more.
 
 ### Two constraints on the scramble
 
