@@ -1,0 +1,158 @@
+---
+title: "TODO: give your report a title"
+author: "TODO: your name"
+date: today
+format:
+  html:
+    toc: true
+    embed-resources: true
+editor_options:
+  chunk_output_type: console
+---
+
+<!--
+HOW THIS WORKS
+
+Eight tasks. Some ask for code, some ask you to write prose, and a couple ask
+for both. Work down the file in order and render whenever you like
+(the Render button, or Ctrl/Cmd+Shift+K).
+
+The alternation between code and text is the point. A report is an argument
+with evidence in it, not a script with comments.
+
+Delete these instruction comments and the "Task N" headings as you go -- by the
+end this should read as a report, not as a worksheet.
+-->
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(dplyr)
+library(ggplot2)
+
+theme_set(theme_light())
+```
+
+## Task 1 (text)
+
+Fill in `title` and `author` in the YAML above. The title should be the question
+you are answering, not "Assignment 2".
+
+Then write two or three sentences here introducing the question: we have data on
+Star Wars characters, and we want to know whether taller ones weigh more.
+
+*Your text here.*
+
+## Task 2 (code)
+
+The `starwars` data comes with dplyr, so there is nothing to load from disk.
+
+Have a look at it — `glimpse()` is a good choice. Give the chunk a label.
+
+```{r}
+#| label: todo-task-2
+# your code here
+
+```
+
+## Task 3 (text and inline code)
+
+Inline code lets you put a computed value inside a sentence. The pattern is a
+backtick, then `r`, then the expression, then a closing backtick.
+
+Here is one done for you. Render the document and see what it becomes:
+
+> The data covers `r nrow(starwars)` characters.
+
+Now write your own sentence below, reporting how many characters are missing a
+recorded mass. `sum(is.na(starwars$mass))` will give you the number.
+
+*Your sentence here.*
+
+## Task 4 (code)
+
+Make a small summary table: for each `sex`, the number of characters and their
+mean height and mean mass.
+
+`group_by()` and `summarise()` will do it. One thing to watch: the means will
+come out as `NA` unless you tell `mean()` what to do about missing values.
+
+```{r}
+#| label: todo-task-4
+# your code here
+
+```
+
+## Task 5 (code)
+
+Plot height on the x axis and mass on the y axis, one point per character.
+
+Give the chunk a label and a figure caption, using the `fig-cap` option.
+
+```{r}
+#| label: todo-task-5
+#| fig-cap: "TODO: write a caption"
+# your code here
+
+```
+
+## Task 6 (text)
+
+Look at your plot and write a short paragraph describing what you see.
+
+There is no right answer here, and that is deliberate — this is the part of a
+report that only you can write. Say what the pattern looks like, and mention
+anything that strikes you as needing a decision.
+
+*Your paragraph here.*
+
+## Task 7 (code)
+
+Something in that plot is distorting the picture.
+
+Find out which character it is, then compute the correlation between height and
+mass twice: once with everyone, and once with that character excluded.
+
+`cor()` needs `use = "complete.obs"` to cope with the missing values.
+
+```{r}
+#| label: todo-task-7
+# your code here
+
+```
+
+## Task 8 (text and inline code)
+
+Write a closing paragraph reporting both correlations, using inline code for the
+two numbers rather than typing them in.
+
+`round()` is your friend here — two decimal places is plenty.
+
+Say which of the two you would report in a paper, and why.
+
+*Your paragraph here.*
+
+---
+
+## When you are done
+
+1. Render one more time and check it reads as a report.
+2. Render it into the `docs/` folder so GitHub Pages can find it.
+3. Commit and push.
+4. Open your Pages URL from part 1 and see your report there.
+
+::: {.callout-tip collapse="true"}
+## Stretch, if you have time
+
+- Hide the code in one chunk with `#| echo: false`, so only its output shows.
+- Move `message: false` and `warning: false` out of the setup chunk and into the
+  YAML so they apply to the whole document. The syntax is:
+
+```yaml
+execute:
+  warning: false
+  message: false
+```
+:::

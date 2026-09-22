@@ -1,31 +1,24 @@
-# Run this BEFORE the workshop. It should finish without errors.
+# Run this once before the workshop. It should end with "All set."
 
 pkgs <- c(
-  "tidyverse",   # data wrangling and plots
-  "vazul",       # analysis blinding
-  "lme4",        # multilevel models
-  "quarto",      # rendering
-  "usethis"      # git/github helpers
+  "tidyverse",  # data wrangling and plots
+  "vazul",      # analysis blinding (part 3)
+  "lme4",       # multilevel models (part 3)
+  "usethis",    # git and GitHub setup from R (part 1)
+  "gitcreds"    # stores your GitHub token (part 1)
 )
 
-to_install <- setdiff(pkgs, rownames(installed.packages()))
-if (length(to_install)) install.packages(to_install)
+install.packages(setdiff(pkgs, rownames(installed.packages())))
 
-# Check that everything loads and the data is there.
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(vazul)
-  library(lme4)
-})
+# Check the datasets are there.
+data(marp, package = "vazul")
+data(williams, package = "vazul")
+stopifnot(nrow(marp) == 10535, nrow(williams) == 112)
 
-data(marp)
-data(williams)
+cat("\nAll set.  R", as.character(getRversion()),
+    " | vazul", as.character(packageVersion("vazul")), "\n\n")
 
-stopifnot(nrow(marp) == 10535, nrow(williams) == 224)
-
-cat("\nAll set.\n",
-    "  R:      ", as.character(getRversion()), "\n",
-    "  vazul:  ", as.character(packageVersion("vazul")), "\n",
-    "  quarto: ", tryCatch(as.character(quarto::quarto_version()),
-                           error = function(e) "NOT FOUND -- install from quarto.org"), "\n",
-    sep = "")
+# You also need, installed outside R:
+#   git     https://git-scm.com/downloads
+#   Quarto  https://quarto.org/docs/get-started/  (bundled with recent RStudio)
+#   a GitHub account

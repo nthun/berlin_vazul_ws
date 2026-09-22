@@ -1,0 +1,153 @@
+---
+title: "Do bigger Star Wars characters weigh more?"
+author: "Tamás Nagy"
+date: today
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+editor_options:
+  chunk_output_type: console
+---
+
+```{r}
+#| label: setup
+
+library(dplyr)
+library(ggplot2)
+
+theme_set(theme_light())
+```
+
+## The question
+
+Body mass generally scales with height, and there is no obvious reason why the
+inhabitants of a fictional galaxy should be an exception. The `starwars` data
+that ships with dplyr gives us height and mass for most of the characters, so we
+can check.
+
+This is a small enough dataset that we can look at every case, which turns out
+to matter.
+
+## The data
+
+```{r}
+#| label: glimpse
+
+glimpse(starwars)
+```
+
+The data covers `r nrow(starwars)` characters. Height and mass are recorded in
+centimetres and kilograms, and `r sum(is.na(starwars$mass))` characters are
+missing a mass — a little under a third, so the missingness is worth keeping in
+mind rather than ignoring.
+
+## Descriptives
+
+```{r}
+#| label: summary-table
+
+starwars |>
+  group_by(sex) |>
+  summarise(
+    n           = n(),
+    mean_height = mean(height, na.rm = TRUE),
+    mean_mass   = mean(mass,   na.rm = TRUE),
+    .groups     = "drop"
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 1)))
+```
+
+Without `na.rm = TRUE` every mean would come back as `NA`, which is R telling us
+something true but unhelpful: it cannot average numbers it does not have.
+
+The `hermaphroditic` row is a single character, and its mean mass is a long way
+from everyone else's. That is worth remembering when we get to the plot.
+
+## Height against mass
+
+```{r}
+#| label: fig-scatter
+#| fig-cap: "Height and mass for every character with both recorded."
+
+starwars |>
+  ggplot(aes(height, mass)) +
+  geom_point(alpha = 0.7) +
+  labs(x = "height (cm)", y = "mass (kg)")
+```
+
+The plot is almost unreadable, and it is one point's fault. A single character
+sits at over 1300 kg while everyone else is below 200, so the y axis stretches to
+accommodate it and the remaining `r sum(!is.na(starwars$mass)) - 1` characters
+are squashed into a band along the bottom.
+
+Whatever the relationship between height and mass is, this figure cannot show
+it.
+
+## The outlier
+
+```{r}
+#| label: heaviest
+
+starwars |>
+  select(name, height, mass, species) |>
+  arrange(desc(mass)) |>
+  head(3)
+```
+
+It is Jabba, who is a large slug, and whose mass is about eight and a half times
+that of the next heaviest character. He is not a data entry error — he really is
+that heavy — but he is not the same kind of thing as the others.
+
+```{r}
+#| label: correlations
+
+r_all <- cor(starwars$height, starwars$mass, use = "complete.obs")
+
+no_jabba <- starwars |> filter(!grepl("Jabba", name))
+
+r_nojabba <- cor(no_jabba$height, no_jabba$mass, use = "complete.obs")
+
+c(all = r_all, without_jabba = r_nojabba) |> round(3)
+```
+
+```{r}
+#| label: fig-scatter-2
+#| fig-cap: "The same plot with Jabba removed."
+
+no_jabba |>
+  ggplot(aes(height, mass)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE) +
+  labs(x = "height (cm)", y = "mass (kg)")
+```
+
+## Conclusion
+
+With every character included, the correlation between height and mass is
+`r round(r_all, 2)` — near enough to nothing. With Jabba excluded it is
+`r round(r_nojabba, 2)`, a strong positive relationship of roughly the size you
+would expect.
+
+One observation out of `r sum(!is.na(starwars$mass))` moves the answer from "no
+relationship" to "a strong one". I would report the second figure, because the
+question is about how height and mass scale among broadly humanoid characters
+and Jabba is not one. But that is a judgment, not a calculation, and the honest
+way to present it is to report both numbers and say which I chose — which is
+what this paragraph does.
+
+Note that every number in it was computed rather than typed. If a character were
+added to the data tomorrow, re-rendering this file would correct the prose.
+
+## Notes for the instructor
+
+- The `na.rm` stumble in the summary table is deliberate and worth letting
+  people hit.
+- Task 6 asks for interpretation before the outlier is named. Some will spot
+  Jabba immediately; others will only say "one point is weird". Both are fine.
+- The 0.13 to 0.75 jump is the moment to connect forward to part 3: here the
+  decision is easy because you can see everything. In the blinding exercise you
+  will have to make the same kind of call without knowing which way it cuts.

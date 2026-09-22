@@ -1,0 +1,218 @@
+---
+title: "Your first repository"
+subtitle: "Blind analysis workshop, part 1"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    embed-resources: true
+---
+
+**Time: about 20 minutes.**
+
+By the end you will have a GitHub repository, connected to an RStudio project on
+your machine, with a live web page attached to it.
+
+Keep this repository. You will add to it in part 2.
+
+::: {.callout-note}
+## Screenshots
+
+The RStudio screenshots here are accurate. GitHub redesigns its website
+regularly, so the GitHub steps are written as instructions rather than pictures —
+if a button has moved, the wording should still get you there.
+:::
+
+---
+
+## Step 0 — Before you start (5 min, together)
+
+You should already have git installed, an account on GitHub, and RStudio able to
+see git. Check the last one now:
+
+**Tools → Global Options → Git/SVN.** The box *Enable version control interface
+for RStudio projects* should be ticked and the *Git executable* path filled in.
+If it is empty, git is not installed or RStudio cannot find it — say so now
+rather than in ten minutes.
+
+Then, in the R console:
+
+```r
+install.packages(c("usethis", "gitcreds"))
+
+usethis::use_git_config(
+  user.name  = "Your Name",
+  user.email = "you@example.com"
+)
+```
+
+The email does not have to be the one you use on GitHub, but it is simpler if it
+is.
+
+### Store a GitHub token
+
+Git needs a credential to push to GitHub. A personal access token is the
+quickest route.
+
+```r
+usethis::create_github_token()
+```
+
+That opens GitHub in your browser with the right options pre-selected. Give the
+token a name, create it, and **copy it** — you will not see it again. Then:
+
+```r
+gitcreds::gitcreds_set()
+```
+
+and paste the token when prompted.
+
+::: {.callout-tip}
+## If something goes wrong here
+
+`usethis::git_sitrep()` prints a report of your git and GitHub configuration and
+is usually enough to see what is missing.
+:::
+
+---
+
+## Step 1 — Make the repository on GitHub (3 min)
+
+Make it on GitHub **first**, then bring it down. Doing it the other way round
+means connecting an existing folder to a remote by hand, which is exactly the
+kind of thing we do not have time for.
+
+1. On GitHub, click **New repository** (the **+** at the top right, or the green
+   button on your profile's Repositories tab).
+2. Name it `blind-analysis-yourname`.
+3. Leave it **Public**.
+4. Tick **Add a README file**. This matters: it gives the repository a first
+   commit, so cloning it is clean, and it gives you a file to edit in a moment.
+5. **Create repository**.
+
+---
+
+## Step 2 — Open it in RStudio (3 min)
+
+1. On the repository page, click the green **Code** button and copy the
+   **HTTPS** URL. It looks like
+   `https://github.com/yourname/blind-analysis-yourname.git`.
+
+   Not the SSH one (`git@github.com:…`) — that needs a key you have not set up.
+
+2. In RStudio: **File → New Project → Version Control → Git**.
+
+3. Paste the URL. The project directory name fills itself in. Choose where to
+   put it — somewhere you will find again.
+
+4. **Create Project.**
+
+RStudio reopens in your new project, and there is now a **Git** tab in the top
+right pane. That tab is the whole interface for today.
+
+---
+
+## Step 3 — Make a change and send it back (5 min)
+
+1. Open `README.md` in RStudio.
+
+2. Write a couple of lines about yourself — who you are, what you work on.
+   Markdown works here, and you will meet it properly in part 2:
+
+   ```md
+   # Blind analysis workshop
+
+   Notes and exercises from the analysis blinding workshop.
+
+   - Name
+   - Institution
+   ```
+
+3. Save.
+
+4. In the **Git** tab, `README.md` now has a yellow `?` or a blue `M` beside it.
+   Tick the **Staged** box next to it.
+
+5. Click **Commit**. Write a message saying what you did — "Add name to README"
+   is a good message, "update" is not. Commit.
+
+6. Click **Push**.
+
+7. Reload the repository page on GitHub. Your text is there.
+
+::: {.callout-note}
+## What just happened
+
+Three separate things: saving (your disk), committing (a named version in git's
+history) and pushing (sending it to GitHub). Keeping them separate is the point.
+It lets you make five small commits and push them together, and it lets you
+write down *why* a change happened, not just that it did.
+:::
+
+---
+
+## Step 4 — Make a change on GitHub and pull it back (2 min)
+
+Changes travel both ways, and this is what you will be doing constantly in part
+3.
+
+1. On GitHub, click `README.md`, then the pencil icon to edit it.
+2. Add a line. **Commit changes** directly to `main`.
+3. Back in RStudio, click **Pull** in the Git tab.
+4. Your local file now has the line you added in the browser.
+
+If you had also edited the same line locally without pulling first, you would
+get a **merge conflict** — git refusing to guess which version wins. Do not go
+looking for one now, but that is what the word means when you meet it.
+
+---
+
+## Step 5 — Turn on GitHub Pages (2 min)
+
+This takes two minutes today and saves ten in part 2.
+
+1. In RStudio, create a folder called `docs` in your project, and in it a file
+   called `index.md` containing one line:
+
+   ```md
+   # Coming soon
+   ```
+
+2. Stage both, commit, push.
+
+3. On GitHub: **Settings → Pages**. Under **Build and deployment**, set
+   **Source** to *Deploy from a branch*, then choose branch **main** and folder
+   **/docs**. Save.
+
+4. Wait a minute, then open
+   `https://yourname.github.io/blind-analysis-yourname/`.
+
+You should see *Coming soon*. That is now a public web page that you update by
+pushing to git.
+
+::: {.callout-important}
+## Keep this repository open
+
+In part 2 you will write a report and render it into that same `docs/` folder.
+When you push, this page becomes your report — no settings to change.
+:::
+
+---
+
+## If you finish early
+
+- Click **History** in the Git tab and look at what a commit record contains.
+- Click **Diff** on a changed file to see the line-by-line view. This is why
+  version control wants plain text and is not much use on a `.docx`.
+- Click **More → Shell** and type `git log --oneline`. Everything the buttons do
+  is a command underneath.
+
+---
+
+## Reference
+
+- **Happy Git with R** — <https://happygitwithr.com>. If something breaks, the
+  answer is almost certainly in here.
+- `usethis::git_sitrep()` — a diagnostic report of your setup.
+- Academic licence (free GitHub Pro for researchers and PhD students) —
+  <https://docs.github.com/en/education>

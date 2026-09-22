@@ -1,0 +1,204 @@
+---
+title: "Literate programming"
+subtitle: "Blind analysis workshop · part 2"
+author: "Tamás Nagy"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    incremental: false
+    embed-resources: true
+    width: 1280
+    height: 720
+editor_options:
+  chunk_output_type: console
+---
+
+## Where we are
+
+In part 1 you put a repository online and wrote a `README.md`. That README was
+markdown, which is the first of the three formats we are going to look at.
+
+In this part we take that idea and add code to it, so that a document can
+compute its own contents.
+
+## The problem
+
+A familiar sequence: you run an analysis, copy the numbers into a manuscript,
+and make a plot that you export and insert. Then a reviewer asks you to exclude
+a few participants.
+
+Now every number and every figure has to be found and replaced by hand, and the
+only thing standing between you and a wrong number in print is your own
+carefulness at five in the afternoon.
+
+## The idea
+
+Keep the text and the code in the same file, and let the document produce its
+own numbers and figures when you render it.
+
+Re-running the analysis and updating the manuscript become the same action. A
+stale number is not something you have to be careful about; it becomes something
+that cannot happen.
+
+## Three formats
+
+| | what it is | when |
+|---|---|---|
+| **`.md`** | plain text with simple formatting | since 2004 |
+| **`.Rmd`** | markdown + R code chunks | 2012, R only |
+| **`.qmd`** | the same idea, rebuilt and generalised | 2022, Quarto |
+
+We will spend most of the time on Quarto, but the progression matters: each one
+adds a single thing to the one before it.
+
+## Markdown
+
+Plain text that carries structure. You already wrote some.
+
+::: {.columns}
+::: {.column width="50%"}
+```md
+## A heading
+
+Some *emphasis* and some
+**strong emphasis**.
+
+- a list
+- of things
+
+[a link](https://quarto.org)
+```
+:::
+::: {.column width="50%"}
+It is readable as text, so a diff in git is meaningful — you can see which
+sentence changed.
+
+That is not true of `.docx`, which is why this matters for us.
+:::
+:::
+
+## R Markdown adds code chunks
+
+````{.markdown}
+The dataset has 87 characters.
+
+```{{r}}
+starwars |> count(species, sort = TRUE)
+```
+````
+
+The chunk runs when you render, and its output lands in the document. Knit the
+file and you get an HTML, PDF or Word file with the results already in place.
+
+## And inline code
+
+This is the part worth slowing down for.
+
+```{.markdown}
+The dataset has `r nrow(starwars)` characters,
+of whom `r sum(starwars$species == "Droid", na.rm = TRUE)` are droids.
+```
+
+renders as
+
+> The dataset has 87 characters, of whom 6 are droids.
+
+Numbers in your sentences are computed, not typed. Change the data, re-render,
+and the prose is correct again.
+
+## Quarto
+
+Quarto is the same idea rebuilt. R Markdown is an R package; Quarto is a
+standalone program that also handles Python, Julia and Observable, and does not
+need R installed to run.
+
+For our purposes the day-to-day differences are small, and an `.Rmd` will
+usually render as a `.qmd` unchanged. Three things are worth knowing.
+
+## 1. YAML at the top
+
+```yaml
+---
+title: "Do bigger characters weigh more?"
+author: "Your name"
+date: today
+format:
+  html:
+    toc: true
+    embed-resources: true
+---
+```
+
+Everything about the output is configured here rather than in the code. The same
+document can be rendered to several formats by changing these few lines.
+
+## 2. Chunk options moved inside
+
+::: {.columns}
+::: {.column width="50%"}
+**R Markdown**
+
+````{.markdown}
+```{{r plot, echo=FALSE, fig.height=4}}
+```
+````
+:::
+::: {.column width="50%"}
+**Quarto**
+
+````{.markdown}
+```{{r}}
+#| label: plot
+#| echo: false
+#| fig-height: 4
+```
+````
+:::
+:::
+
+Options now live in the chunk body, one per line, prefixed with `#|`. It is more
+typing, but it does not run off the edge of the screen and it is easier to
+comment out a single option.
+
+## 3. The options you will actually use
+
+| option | effect |
+|---|---|
+| `label` | names the chunk; use it, it makes errors findable |
+| `echo: false` | run the code, hide it |
+| `eval: false` | show the code, do not run it |
+| `warning: false`, `message: false` | keep library chatter out of the report |
+| `fig-cap` | caption, and makes the figure cross-referenceable |
+
+Set them for the whole document in the YAML, or per chunk when you need an
+exception.
+
+## Your turn
+
+`exercises/02_literate/02a_build_a_report.qmd`
+
+You will build a short report on the `starwars` data that ships with dplyr,
+asking whether taller characters weigh more.
+
+Eight tasks. Some ask for code, some ask you to write prose. The alternation is
+deliberate — a report is an argument with evidence in it, not a script with
+comments.
+
+## Publishing
+
+When you are happy with it, render into `docs/`, commit, and push.
+
+You switched GitHub Pages on in part 1, so the placeholder page you saw then
+will be replaced by your report. It can take a minute to update.
+
+That URL is how your partner will read your work in part 3.
+
+## What we have not covered
+
+Quarto does considerably more than this: cross-references, citations from a
+`.bib` file, parameterised reports, multi-page websites, books, and the slides
+you are looking at right now.
+
+The documentation at <https://quarto.org> is genuinely good, and the place to
+start is the guide rather than the reference.

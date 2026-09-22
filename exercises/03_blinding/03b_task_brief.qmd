@@ -1,6 +1,6 @@
 ---
 title: "Task brief: blind a dataset, analyse a blinded one"
-subtitle: "Berlin workshop, part 3"
+subtitle: "Blind analysis workshop, part 3"
 format:
   html:
     toc: true

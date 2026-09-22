@@ -1,6 +1,6 @@
 # Analysis blinding task
 
-Berlin `vazul` workshop, part 3. Full instructions are in the workshop repo at
+Blind analysis workshop, part 3. Full instructions are in the workshop repo at
 `exercises/03_blinding/03b_task_brief.qmd`.
 
 ## Checklist

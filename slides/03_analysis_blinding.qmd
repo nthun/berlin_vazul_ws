@@ -1,6 +1,6 @@
 ---
 title: "Analysis blinding"
-subtitle: "Berlin workshop · part 3"
+subtitle: "Blind analysis workshop · part 3"
 author: "Tamás Nagy"
 format:
   revealjs:

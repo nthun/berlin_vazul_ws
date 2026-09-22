@@ -1,4 +1,4 @@
-# Analysis blinding workshop — Berlin
+# Blind analysis workshop
 
 A three-hour hands-on workshop on reproducible, bias-resistant analysis
 workflows, built around the [`vazul`](https://nthun.github.io/vazul/) R package.
