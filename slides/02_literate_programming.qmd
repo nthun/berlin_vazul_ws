@@ -176,7 +176,8 @@ exception.
 
 ## Your turn
 
-`exercises/02_literate/02a_build_a_report.qmd`
+Copy `exercises/02_literate/02a_build_a_report.qmd` into your part-1 repository
+and save it as **`docs/index.qmd`**.
 
 You will build a short report on the `starwars` data that ships with dplyr,
 asking whether taller characters weigh more.
@@ -187,12 +188,13 @@ comments.
 
 ## Publishing
 
-When you are happy with it, render into `docs/`, commit, and push.
+Because the file is `docs/index.qmd`, rendering it writes `docs/index.html` —
+over the top of the *Coming soon* page from part 1. Commit both, push.
 
-You switched GitHub Pages on in part 1, so the placeholder page you saw then
-will be replaced by your report. It can take a minute to update.
+GitHub Pages is already switched on, so within a minute your Pages URL shows the
+report.
 
-That URL is how your partner will read your work in part 3.
+In part 3 you will publish your blind analysis the same way.
 
 ## What we have not covered
 

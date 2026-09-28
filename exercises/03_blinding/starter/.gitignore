@@ -10,3 +10,6 @@
 # Never commit anything that could unblind the analyst
 keys/
 data/raw/
+
+# Your blinded file for your partner travels by pull request, not in your own repo
+outbox/

@@ -26,7 +26,7 @@ marp_blinded <-
     .groups   = "country"
   )
 
-dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
-readr::write_csv(marp_blinded, "data/processed/marp_blinded.csv")
+dir.create("outbox", showWarnings = FALSE)
+readr::write_csv(marp_blinded, "outbox/marp_blinded.csv")
 
 message("Blinded file written. Now run: source('R/check_blinding.R')")

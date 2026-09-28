@@ -15,7 +15,7 @@ library(dplyr)
 
 if (!exists("marp_prep")) source("R/00_preprocess.R")
 
-blinded_path <- "data/processed/marp_blinded.csv"
+blinded_path <- "outbox/marp_blinded.csv"
 
 stopifnot("No blinded file found -- run R/01_blind_data.R first" =
             file.exists(blinded_path))
@@ -158,7 +158,7 @@ n_fail <- sum(!vapply(results, `[[`, logical(1), "passed"))
 
 cat(strrep("-", 66), "\n", sep = "")
 if (n_fail == 0) {
-  cat("All checks passed. Commit the file and open your pull request.\n\n")
+  cat("All checks passed. Send outbox/marp_blinded.csv to your partner.\n\n")
 } else {
   cat(n_fail, " check(s) failed. Fix 01_blind_data.R and run this again.\n\n", sep = "")
 }

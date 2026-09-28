@@ -19,14 +19,24 @@ sent you without knowing what was in it, and unblinded.
 
 ## Before you arrive
 
-You need **R (≥ 4.1)**, **RStudio** (or Positron), **Quarto**, and **git**, plus
-a **GitHub account**. Then run:
+Setup takes longer than you expect — installing git on a Mac especially. Please
+do all of this **before** the workshop.
 
-```r
-source("setup/install_packages.R")
-```
+1. Install **R** (≥ 4.1), **RStudio** (or Positron) and **git**.
+   - **Mac:** open Terminal, run `xcode-select --install`, and accept the
+     prompt. It can take 10–20 minutes.
+   - **Windows:** <https://git-scm.com/downloads>
+2. Create a **GitHub** account.
+3. Get these materials: green **Code** button → **Download ZIP**, unzip, and
+   open `berlin_vazul_ws.Rproj`.
+4. Run:
 
-It should print `All set.` If it does not, come ten minutes early.
+   ```r
+   source("setup/install_packages.R")
+   ```
+
+   It should end with **All set.** If it says git is not working, follow the
+   message it prints.
 
 You should be comfortable writing R code and using the tidyverse. You do not
 need to know multilevel models — where the statistics get ahead of the group,
@@ -35,20 +45,20 @@ the code is given to you.
 ## Repository layout
 
 ```
-slides/          presentation for each part
-exercises/       run-along material and the task briefs
-  03_blinding/
-    03a_vazul_walkthrough.qmd   run this alongside part 3
-    03b_task_brief.qmd           the independent task
-    starter/                    copy this into your own repo
-R/               shared helper scripts
-data/            fallback data
-solutions/       reference answers -- try not to look first
-docs/            rendered output
+slides/            the three presentations
+exercises/
+  01_git/          part 1: your first repository
+  02_literate/     part 2: the report skeleton
+  03_blinding/     part 3: walkthrough, task brief, starter project
+images/            figures used in the slides
+setup/             install_packages.R
+data/              a fallback blinded file for part 3
+solutions/         reference answers -- try not to look first
+docs/              an example rendered report
 ```
 
-Every `.qmd` here renders standalone (`embed-resources: true`), so you can open
-and render any one of them without building the whole project.
+Every `.qmd` renders standalone (`embed-resources: true`), with one exception:
+the part-3 analysis template needs the blinded file your partner sends you.
 
 ## Part 3 in one paragraph
 
@@ -65,9 +75,30 @@ is what the walkthrough and the task are about.
 - Dutilh, G., Sarafoglou, A., & Wagenmakers, E.-J. (2019). Flexible yet fair:
   Blinding analyses in experimental psychology. *Synthese*.
   <https://doi.org/10.1007/s11229-019-02456-7>
-- Hoogeveen, S. et al. (2022). A many-analysts approach to the relation between
-  religiosity and well-being. <https://doi.org/10.31234/osf.io/dpex6>
+- Hoogeveen, S., Sarafoglou, A., van Elk, M., & Wagenmakers, E.-J. (2022). A
+  many-analysts approach to the relation between religiosity and well-being:
+  The dataset. *PsyArXiv*. <https://doi.org/10.31234/osf.io/dpex6>
+
+## Rebuilding the HTML
+
+The rendered HTML is committed so the slides and handouts open straight from the
+repository, and every file is self-contained. To rebuild one, use the terminal:
+
+```bash
+quarto render slides/01_git_github.qmd
+```
+
+RStudio's **Render** button runs `quarto preview` for slides, which does not
+embed resources and leaves the HTML depending on a `_files/` folder that git
+ignores.
 
 ## License
 
-Materials: CC BY 4.0. Code: MIT.
+© 2026 Tamás Nagy. Licensed under [CC BY 4.0](LICENSE.md): you may share and
+adapt these materials, code included, for any purpose, provided you give
+appropriate credit.
+
+Not covered: the third-party images in `images/` (the Happy Git with R figure,
+the GIFs, and screenshots of RStudio), which remain under their owners' terms,
+and the MARP data, which comes from the
+[`vazul`](https://nthun.github.io/vazul/) package and its original source.

@@ -25,8 +25,8 @@ library(dplyr)
 
 source("R/00_preprocess.R")
 
-# Pick your own seed and write it down in blinding_log.md. Do not share it with
-# the person who will analyse this data.
+# Pick your own seed and note it in blinding_log.md. Your partner could find it
+# in your repo -- like the original data, the exercise relies on them not looking.
 set.seed(  )   # <- TODO
 
 marp_blinded <-
@@ -36,11 +36,12 @@ marp_blinded <-
   identity()
 
 # ---------------------------------------------------------------------------
-# Write the file your partner will receive.
+# Write the file your partner will receive. It goes to outbox/, which git
+# ignores: data/processed/ is reserved for the file your partner sends YOU.
 # ---------------------------------------------------------------------------
 
-dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
-readr::write_csv(marp_blinded, "data/processed/marp_blinded.csv")
+dir.create("outbox", showWarnings = FALSE)
+readr::write_csv(marp_blinded, "outbox/marp_blinded.csv")
 
 # ---------------------------------------------------------------------------
 # Now: source("R/check_blinding.R")

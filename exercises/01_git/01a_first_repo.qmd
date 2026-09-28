@@ -171,12 +171,16 @@ looking for one now, but that is what the word means when you meet it.
 
 This takes two minutes today and saves ten in part 2.
 
-1. In RStudio, create a folder called `docs` in your project, and in it a file
-   called `index.md` containing one line:
+1. In RStudio, create a folder called `docs` in your project. In it, create a
+   text file (**File → New File → Text File**) containing one line, and save it
+   as `docs/index.html`:
 
-   ```md
-   # Coming soon
+   ```html
+   <h1>Coming soon</h1>
    ```
+
+   It has to be `.html`, not `.md`: in part 2 your report is rendered to
+   `docs/index.html` and simply replaces this file.
 
 2. Stage both, commit, push.
 
@@ -193,8 +197,9 @@ pushing to git.
 ::: {.callout-important}
 ## Keep this repository open
 
-In part 2 you will write a report and render it into that same `docs/` folder.
-When you push, this page becomes your report — no settings to change.
+In part 2 you will save your report as `docs/index.qmd` in this repository.
+Rendering it overwrites `docs/index.html`, and when you push, this page becomes
+your report — no settings to change.
 :::
 
 ---

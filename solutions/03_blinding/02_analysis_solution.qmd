@@ -37,10 +37,16 @@ Three things, in roughly this order of difficulty.
 
 ## Load a blinded file
 
+This uses the fallback file in the workshop repo, so it renders in place. In a
+participant's repo the file is `data/processed/marp_blinded.csv`.
+
 ```{r}
 #| label: load
 
-d_raw <- read_csv("data/processed/marp_blinded.csv", show_col_types = FALSE)
+d_raw <- read_csv(
+  here::here("data/processed/marp_blinded_fallback.csv"),
+  show_col_types = FALSE
+)
 ```
 
 ## The reveal, ahead of time

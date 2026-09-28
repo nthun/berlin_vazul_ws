@@ -11,6 +11,12 @@ editor_options:
 ---
 
 <!--
+BEFORE YOU START
+
+Save a copy of this file in your part-1 repository as docs/index.qmd.
+Rendering it there produces docs/index.html, which replaces the "Coming soon"
+page on your GitHub Pages site.
+
 HOW THIS WORKS
 
 Eight tasks. Some ask for code, some ask you to write prose, and a couple ask
@@ -138,10 +144,11 @@ Say which of the two you would report in a paper, and why.
 
 ## When you are done
 
-1. Render one more time and check it reads as a report.
-2. Render it into the `docs/` folder so GitHub Pages can find it.
-3. Commit and push.
-4. Open your Pages URL from part 1 and see your report there.
+1. Render one more time and check it reads as a report. Because the file is
+   `docs/index.qmd`, the output is `docs/index.html`.
+2. In the Git pane, stage `docs/index.qmd` and `docs/index.html`, commit, push.
+3. Open your Pages URL from part 1. After a minute, *Coming soon* is replaced by
+   your report.
 
 ::: {.callout-tip collapse="true"}
 ## Stretch, if you have time

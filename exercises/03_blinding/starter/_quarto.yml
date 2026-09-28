@@ -1,0 +1,3 @@
+project:
+  execute-dir: project   # run code from the project root, so data/... paths work
+  output-dir: docs       # rendered HTML goes where GitHub Pages looks

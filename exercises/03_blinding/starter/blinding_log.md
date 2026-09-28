@@ -6,7 +6,7 @@ Written by: ______________
 
 **Seed:** ______________
 
-*Do not share the seed with whoever analyses this data.*
+*Your partner could read this. The exercise relies on them not looking.*
 
 **What I masked, and why:**
 

@@ -37,22 +37,17 @@ Find your partner now and swap GitHub usernames.
 
 ## Step 1 — Make your repository (5 min)
 
-1. Copy the `starter/` folder out of the workshop repo to somewhere of your own.
-2. Rename it to something like `vazul-task-yourname`.
-3. Create a new **public** repository on GitHub with that name. Do not add a
-   README — you already have one.
-4. In RStudio: open the folder, then
+The same GitHub-first route as in part 1.
 
-```bash
-git init
-git add .
-git commit -m "Start blinding task"
-git branch -M main
-git remote add origin https://github.com/YOURNAME/vazul-task-yourname.git
-git push -u origin main
-```
-
-5. Paste the repo URL into the chat and send it to your partner.
+1. On GitHub, create a new **public** repository called `vazul-task-yourname`.
+   Tick **Add a README file**.
+2. In RStudio: **File → New Project → Version Control → Git**, and paste the
+   repository's HTTPS URL.
+3. Copy everything inside the workshop's `exercises/03_blinding/starter/` folder
+   into your new project folder. Let it replace the README.
+4. In the **Git** pane, stage everything, commit ("Start blinding task") and
+   **Push**.
+5. Send your partner the URL of your repository.
 
 ---
 
@@ -114,26 +109,32 @@ This compares your file against the original and reports pass/fail on each
 requirement. You can run it because you still have the original; your partner
 cannot. Verifying the blinding is the blinder's job.
 
-Fix anything that fails, then write your seed and your choices into
+Fix anything that fails, then note your seed and your choices in
 `blinding_log.md`.
+
+Your blinded file is written to `outbox/marp_blinded.csv`. That folder is
+ignored by git on purpose: `data/processed/` in your repo is reserved for the
+file your **partner** sends you.
 
 ---
 
 ## Step 3 — Swap files (8 min)
 
-Use a fork and a pull request. Do **not** send collaborator invitations — they
-have to be accepted by email and it will cost the room ten minutes.
+All of this happens in the browser. Do **not** send collaborator invitations —
+they have to be accepted by email and cost the room ten minutes.
 
-1. Go to your partner's repo on GitHub and click **Fork**.
-2. Clone your fork, copy in **your** `data/processed/marp_blinded.csv` and your
-   `blinding_log.md` (rename it `blinding_log_yourname.md` so it does not clash).
-3. Commit, push to your fork, and open a pull request against their `main`.
-4. Review and merge the pull request **they** opened on your repo.
-5. `git pull` on your own repo. You now have their blinded file.
+1. Open your **partner's** repository on GitHub and go into `data/processed/`.
+2. **Add file → Upload files**, and drag in your `outbox/marp_blinded.csv`.
+3. You do not have write access, so GitHub forks the repository for you and
+   offers to propose the change. Accept, then **Create pull request**.
+4. On **your own** repository, open the pull request your partner sent. Check
+   that it adds one file to `data/processed/`, and **Merge** it.
+5. In RStudio, click **Pull**. You now have their blinded file.
 
-> **If anything goes wrong here, do not lose the analysis.** A fallback blinded
-> file is in the workshop repo at `data/processed/marp_blinded_fallback.csv`.
-> Use it, carry on, and fix the git afterwards.
+> **If anything goes wrong here, do not lose the analysis.** Copy
+> `data/processed/marp_blinded_fallback.csv` from the workshop repo into your
+> project's `data/processed/`, rename it `marp_blinded.csv`, carry on, and fix
+> the git afterwards.
 
 ---
 
@@ -165,8 +166,12 @@ you unblind. Do that honestly; the whole session turns on that one moment.
 
 ### Deliverable
 
-Render the document, commit it, push. If there is time, turn on GitHub Pages and
-send your partner the link.
+Render the document. The HTML goes to `docs/analysis/02_analysis.html` — the
+project is already set up for that. Commit and push.
+
+If there is time, turn on GitHub Pages exactly as in part 1 (branch **main**,
+folder **/docs**) and send your partner
+`https://yourname.github.io/vazul-task-yourname/analysis/02_analysis.html`.
 
 ---
 

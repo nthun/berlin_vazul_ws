@@ -201,8 +201,8 @@ is the part worth practising; the rest is scaffolding to get you there.
 
 - find a partner, swap GitHub usernames
 - repository up in about five minutes
-- blinded and checked by :20
-- pull requests exchanged by :30
+- blinded and checked by :25
+- pull requests exchanged by :35
 - analysis and unblinding after that
 
 I will be walking around. Ask early rather than late.
